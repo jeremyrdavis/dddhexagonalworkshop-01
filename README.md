@@ -207,6 +207,36 @@ public class AttendeeEntity {
 
 ### Repositories
 
+Complete the AttendeeRepository by adding a method to persist attendees.
+
+You have probably noticed that our 'AttendeeRepository` implements `PanacheRepository<AttendeeEntity>`.  `PanacheRepository' provides methods for manipulating JPA Entities; however, following DDD guidelines, the Repository will be the only persistence class that other ojbects can access.  To this end we need methods that take an `Attendee` and convert it to an `AttendeeEntity`.
+
+```java
+package dddhexagonalworkshop.conference.attendees.persistence;
+
+import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+
+public class AttendeeRepository implements PanacheRepository<AttendeeEntity> {
+
+
+  public void persist(Attendee aggregate) {
+    // transform the aggregate to an entity
+    AttendeeEntity attendeeEntity = fromAggregate(aggregate);
+    persist(attendeeEntity);
+  }
+
+  private AttendeeEntity fromAggregate(Attendee attendee) {
+    AttendeeEntity entity = new AttendeeEntity(attendee.getEmail());
+    return entity;
+  }
+}
+```
+
+In this implementation the `Attendee` aggregate has no knowledge of the persistence framework.
+
+### Events
+
 - Create the AttendeeRegistredEvent in the domain/events package
     - create a single field, "email"
 
@@ -255,29 +285,6 @@ public class Attendee {
 
 ```
 
-- Create the AttendeeRepository using Hibernate Panache
-
-```java
-package dddhexagonalworkshop.conference.attendees.persistence;
-
-import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
-
-public class AttendeeRepository implements PanacheRepository<AttendeeEntity> {
-
-
-  public void persist(Attendee aggregate) {
-    // transform the aggregate to an entity
-    AttendeeEntity attendeeEntity = fromAggregate(aggregate);
-    persist(attendeeEntity);
-  }
-
-  private AttendeeEntity fromAggregate(Attendee attendee) {
-    AttendeeEntity entity = new AttendeeEntity(attendee.getEmail());
-    return entity;
-  }
-}
-```
 
 - Create the AttendeeEventPublisher
     - create a single method, "publish" that takes an AttendeeRegisteredEvent
