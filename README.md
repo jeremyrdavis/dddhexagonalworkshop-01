@@ -17,7 +17,43 @@ In this iteration, we will cover the basics of Domain-Driven Design by implement
 
 We will alss use the `Hexangonal Architecture`, or `Ports and Adapters` pattern to integrate with external systems, ensuring a clean separation of concerns.
 
+The basic project structure is already set up for you. The project is structured as follows:
+
+```text
+dddhexagonalworkshop
+├── conference
+│   └── attendees
+│       ├── api
+│       │   └── AttendeeDTO.java
+│       ├── domain
+│       │   ├── aggregates
+│       │   │   └── Attendee.java
+│       │   ├── events
+│       │   │   └── AttendeeRegisteredEvent.java
+│       │   ├── services
+│       │   │   ├── AttendeeRegistrationResult.java
+│       │   │   └── AttendeeService.java
+│       │   │   └── RegisterAttendeeCommand.java
+│       │   └── valueobjects
+│       ├── infrastructure
+│       │   ├── AttendeeEndpoint.java
+│       │   └── AttendeeEventPublisher.java
+│       └── persistence
+│           ├── AttendeeEntity.java
+│           └── AttendeeRepository.java
+```
+As you progress through the workshop, you will fill in the missing pieces of code in the appropriate packages.  The workshop authors have stubbed out the classes so that you can focus on the Domain Driven Design concepts as much as possible and Java and framework concepts as little as possilb. 
+You can type in the code line by line or copy and paste the code provided into your IDE. You can also combine the approaches as you see fit. The goal is to understand the concepts and how they fit together in a DDD context.
+
+
+***Quarkus*** 
+Quarkus, https://quarkus.io, is a modern Java framework designed for building cloud-native applications. It provides a set of tools and libraries that make it easy to develop, test, and deploy applications. In this workshop, we will leverage Quarkus to implement our DDD concepts and build a RESTful API for registering attendees.
+The project uses Quarkus, a Java framework that provides built-in support for REST endpoints, JSON serialization, and database access.  Quarkus also features a `Dev Mode` that automatically spins up external dependencies like Kafka and PostgreSQL, allowing you to focus on writing code without worrying about the underlying infrastructure.
+
 **Steps:**
+
+In this first iteration, we will implement the basic workflow for registering an attendee. The steps are as follows:
+
 1. Create a `RegisterAttendeeCommand` with only one, basic property (email).
 2. Implement an Adapter in the form of a REST Endpoint, `AttendeeEndpoint` with a POST method.
 3. Implement a Service, `AttendeeService` that will orchestration the registration process.
@@ -27,17 +63,17 @@ We will alss use the `Hexangonal Architecture`, or `Ports and Adapters` pattern 
 6. Create an Entity, `AttendeeEntity`, to persist instances of the `Attendee` entity in a database.
 7. Create an Adapter, `AttendeeEventPublisher`, that sends events to Kafka to propagate changes to the rest of the system.
 
-**Summary:**
 By the end of Iteration 1, you'll have a solid foundation in DDD concepts and a very basic working application.
 
-**Note:** You can type in the code line by line or copy and paste the code provided into your IDE. You can also combine the approaches as you see fit. The goal is to understand the concepts and how they fit together in a DDD context.
+Let's get coding!
 
+### Step 1: Commands
 
-### Commands
-
-Commands are objects that encapsulate a request to perform an action. They are different from Events because Commands can fail or be rejected, while Events are statements of fact that have already happened.
+Commands are objects that encapsulate a request to perform an action. Commands are immutable and can fail or be rejected.  Commands are closely related to Events, which we will cover later. The difference between the two is that Commands represent an intention to change the state of the system, while Events are statements of fact that have already happened.
 
 We will start by creating a command to register an attendee. This command will encapsulate the data needed to register an attendee, which in this iteration is just the email address.
+
+The `RegisterAttendeeCommand` can be found in the `dddhexagonalworkshop.conference.attendees.domain.services` package because it is part of AttendeeService's API. We will implement the `AttendeeService` later; for now, we will just create the command.
 
 Update the RegisterAttendeeCommand object with a single String, "email."
 
@@ -51,6 +87,7 @@ public record RegisterAttendeeCommand(String email) {
 
 ### Adapters
 
+The `Ports and Adapters` pattern, also known as `Hexagonal Architecture`, is a design pattern that separates the core business logic from external systems. This allows the core application to remain independent of the technologies used for input/output, such as databases, message queues, or REST APIs.  The phrase was coined by Alistair Cockburn in the early 2000s.  The pattern fits well with Domain-Driven Design (DDD) because it allows the domain model to remain pure and focused on business logic, while the adapters handle the technical details of communication with external systems.
 Adapters are components that translate between the domain model and external systems or frameworks. In the context of a REST endpoint, an adapter handles the conversion of HTTP requests to commands that the domain model can process, and vice versa for responses.
 
 We don't need to manually convert the JSON to and from Java objects, as Quarkus provides built-in support for this using Jackson.
