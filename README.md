@@ -147,8 +147,11 @@ public record AttendeeDTO(String email) {
 
 ### Step 4: Domain Services
 
-- Create the AttendeeService in the attendes/domain/services package
-    - create one method, "registerAttendee" that takes a RegisterAttendeeCommand
+Domain Services implement functionality that does not have a natural home in another object.  Services also typically operate on or interact with multiple other objects.  Services are named after the functionality they provide.
+
+Our `AttendeeService` coordinates the workflow for registering an attendee.  The `AttendeeService` calls the `Attendee` Aggregate and the deals with the results.
+
+Implement the method, "registerAttendee" so that it takes a RegisterAttendeeCommand and returns an `AttendeeRegisteredResult`.  Do not worry if the class does not compile immediately.  We will implement the other objects in the next steps.
 
 ```java
 package domain.services;
@@ -159,10 +162,30 @@ import jakarta.enterprise.context.ApplicationScoped;
 @ApplicationScoped
 public class AttendeeService {
 
+
+    @Inject
+    AttendeeRepository attendeeRepository;
+
+    @Inject
+    AttendeeEventPublisher attendeeEventPublisher;
+
     public AttendeeDTO registerAttendee(RegisterAttendeeCommand registerAttendeeAttendeeCommand) {
         // Logic to register an attendee
-        // This is a placeholder implementation
-        return new AttendeeDTO(registerAttendeeAttendeeCommand.email());
+        AttendeeRegistrationResult result = Attendee.registerAttendee(registerAttendeeAttendeeCommand.email(),
+                registerAttendeeAttendeeCommand.firstName(),
+                registerAttendeeAttendeeCommand.lastName(),
+                registerAttendeeAttendeeCommand.address());
+
+
+        //persist the attendee
+        QuarkusTransaction.requiringNew().run(() -> {
+            attendeeRepository.persist(result.attendee());
+        });
+
+        //notify the system that a new attendee has been registered
+        attendeeEventPublisher.publish(result.attendeeRegisteredEvent());
+
+        return new AttendeeDTO(result.attendee().getEmail());
     }
 }
 
