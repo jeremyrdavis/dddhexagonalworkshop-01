@@ -5,7 +5,8 @@
 
 ### Overview
 
-**Introduction:**
+**Introduction to Iteration 1**
+
 In this iteration, we will cover the basics of Domain-Driven Design by implementing a basic workflow for registering a conference attendee. We will create the following DDD constructs:
 - Aggregate
 - Domain Service
@@ -56,12 +57,13 @@ In this first iteration, we will implement the basic workflow for registering an
 
 1. Create a `RegisterAttendeeCommand` with only one, basic property (email).
 2. Implement an Adapter in the form of a REST Endpoint, `AttendeeEndpoint` with a POST method.
-3. Implement a Service, `AttendeeService` that will orchestration the registration process.
-4. Create an `Attendee` entity that represents the attendee in the domain and implements the application's invariants or business rules.
-4. Create a Domain Event, `AttendeeRegisteredEvent`, that will be published when an attendee is successfully registered.
-5. Create a Repository interface, `AttendeeRepository`, that defines methods for saving and retrieving attendees.
-6. Create an Entity, `AttendeeEntity`, to persist instances of the `Attendee` entity in a database.
-7. Create an Adapter, `AttendeeEventPublisher`, that sends events to Kafka to propagate changes to the rest of the system.
+3. Implement a Data Transfer Object, `AttendeeDTO`, to return the attendee's details to the UI.
+4. Implement a Domain Service, `AttendeeService`, to orchestration the registration process.
+5. Implement an `Attendee` Aggregate to isolate invariants (business logic) from the rest of the application.
+6. Implement a Domain Event, `AttendeeRegisteredEvent`, that will be published when an attendee is successfully registered.
+7. Implement a Repository interface, `AttendeeRepository`, that defines methods for saving and retrieving attendees.
+8. Create an Entity, `AttendeeEntity`, to persist instances of the `Attendee` entity in a database.
+9. Create an Adapter, `AttendeeEventPublisher`, that sends events to Kafka to propagate changes to the rest of the system.
 
 By the end of Iteration 1, you'll have a solid foundation in DDD concepts and a very basic working application.
 
@@ -166,6 +168,40 @@ public class AttendeeService {
 
 ```
 
+### Step 5: Aggregates
+
+Aggregates are the core objects in Domain Driven Design.  An Aggregate represents the most important object or objects in our bounded context.
+We are implementing the Attendees Bounded Context, and the Attendee is the most important object in this Bounded Context.
+
+An Aggregate both represents the real world object, a conference attendee in this case, and encapsulates all of the invariants, or business logic, associated with the object.  In this iteration, we will implement business logic to notify the rest of the system about an attendee's registration.
+
+Update the Attendee Aggregate in attendees/domain/aggregates so that the `registerAttendee` method creates and returns an instance of `Attendee` and an `AttendeeRegisteredEvent` that will be used to notify the rest of the system.  We will also need to create an object to hold both the `Attendee` and `AttendeeRegisteredEvent`, `AttendeeRegistrationResult`.  Do not worry if your class does not compile immediately.  We will create the other objects in the next step.
+
+Implement the `registerAttendee` method by creating an AttendeeEntity and an AttendeeRegistredEvent.  Instantiate an `AttendeeRegistrationResult` with the newly created objects and return the `AttendeeRegistrationResult`.
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain;
+
+public class Attendee {
+
+  String email;
+
+  public static AttendeeRegistrationResult registerAttendee(String email, String firstName, String lastName, Address address) {
+      // Here you would typically perform some business logic, like checking if the attendee already exists
+      // and then create an event to publish.
+      Attendee attendee = new Attendee(email, firstName, lastName, address);
+      AttendeeRegisteredEvent event = new AttendeeRegisteredEvent(email, attendee.getFullName());
+      return new AttendeeRegistrationResult(attendee, event);
+  }
+
+  public String getEmail(){
+    return email;
+  }
+}
+
+```
+
+
 ### Step 5: Entities
 
 - Create the AttendeeEntity in the attendees/persistence package
@@ -205,6 +241,36 @@ public class AttendeeEntity {
 }
 ```
 
+### Step 7: Events
+
+A Domain Event is a record of some business-significant occurrence in a Bounded Context.  It is obviously significant that an attendee has registered because that one way conferences make money, but it is also signfificant because other parts of the system need to respond to the registration.
+
+For this iteration, we will use a minimal event with only the attendee's email address.  Update the AttendeeRegistrationEvent with the email:
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain.events;
+
+public record AttendeeRegisteredEvent(String email) {
+}
+```
+
+### Step 8: Creating Multiple Objects 
+
+We need to create multiple objects when an attendee registers.  First, we need an `Attendee`.  Second, we need an `AttendeeRegisteredEvent`.  We will use an `AttendeeRegistrationResult` to hold both the `Attendee` and `AttendeeRegisteredEvent`. 
+
+Complete the `AttendeeRegistrationResult` by adding an `Attendee` and an `AttendeeRegisteredEvent`.
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain.services;
+
+import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
+import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegisteredEvent;
+
+public record AttendeeRegistrationResult(Attendee attendee, AttendeeRegisteredEvent attendeeRegisteredEvent) {
+}
+```
+
+
 ### Step 6: Repositories
 
 Complete the AttendeeRepository by adding a method to persist attendees.
@@ -235,63 +301,7 @@ public class AttendeeRepository implements PanacheRepository<AttendeeEntity> {
 
 In this implementation the `Attendee` aggregate has no knowledge of the persistence framework.
 
-### Step 7: Events
 
-A Domain Event is a record of some business-significant occurrence in a Bounded Context.  It is obviously significant that an attendee has registered because that one way conferences make money, but it is also signfificant because other parts of the system need to respond to the registration.
-
-For this iteration, we will use a minimal event with only the attendee's email address.  Update the AttendeeRegistrationEvent with the email:
-
-```java
-package dddhexagonalworkshop.conference.attendees.domain.events;
-
-public record AttendeeRegisteredEvent(String email) {
-}
-```
-
-### Step 8: Creating Multiple Objects 
-
-We need to create multiple objects when an attendee registers.  First, we need an `Attendee`.  Second, we need an `AttendeeRegisteredEvent`.  We will use an `AttendeeRegistrationResult` to hold both the `Attendee` and `AttendeeRegisteredEvent`. 
-
-Complete the `AttendeeRegistrationResult` by adding an `Attendee` and an `AttendeeRegisteredEvent`.
-
-```java
-package dddhexagonalworkshop.conference.attendees.domain.services;
-
-import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
-import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegisteredEvent;
-
-public record AttendeeRegistrationResult(Attendee attendee, AttendeeRegisteredEvent attendeeRegisteredEvent) {
-}
-```
-
-### Step 9: Aggregates
-
-- Create the Attendee Aggregate in attendees/domain/aggregates
-    - create a single method, "registerAttendee"
-    - implement the method
-        - by creating an AttendeeEntity and an AttendeeRegistredEvent
-        - Create the AttendeeRegistrationResult in the attendees/domain/services package to return the AttendeeEntity and AttendeeRegisteredEvent
-```java
-package dddhexagonalworkshop.conference.attendees.domain;
-
-public class Attendee {
-
-  String email;
-
-  public static AttendeeRegistrationResult registerAttendee(String email, String firstName, String lastName, Address address) {
-      // Here you would typically perform some business logic, like checking if the attendee already exists
-      // and then create an event to publish.
-      Attendee attendee = new Attendee(email, firstName, lastName, address);
-      AttendeeRegisteredEvent event = new AttendeeRegisteredEvent(email, attendee.getFullName());
-      return new AttendeeRegistrationResult(attendee, event);
-  }
-
-  public String getEmail(){
-    return email;
-  }
-}
-
-```
 
 ### Step 10: Another Adapter
 - Create the AttendeeEventPublisher
