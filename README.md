@@ -237,8 +237,9 @@ In this implementation the `Attendee` aggregate has no knowledge of the persiste
 
 ### Events
 
-- Create the AttendeeRegistredEvent in the domain/events package
-    - create a single field, "email"
+A Domain Event is a record of some business-significant occurrence in a Bounded Context.  It is obviously significant that an attendee has registered because that one way conferences make money, but it is also signfificant because other parts of the system need to respond to the registration.
+
+For this iteration, we will use a minimal event with only the attendee's email address.  Update the AttendeeRegistrationEvent with the email:
 
 ```java
 package dddhexagonalworkshop.conference.attendees.domain.events;
@@ -247,8 +248,11 @@ public record AttendeeRegisteredEvent(String email) {
 }
 ```
 
-- Create the AttendeeRegistrationResult in the attendees/domain/services package
-    - create two fields, "attendee" and "attendeeRegistrationEvent"
+### Creating Multiple Objects 
+
+We need to create multiple objects when an attendee registers.  First, we need an `Attendee`.  Second, we need an `AttendeeRegisteredEvent`.  We will use an `AttendeeRegistrationResult` to hold both the `Attendee` and `AttendeeRegisteredEvent`. 
+
+Complete the `AttendeeRegistrationResult` by adding an `Attendee` and an `AttendeeRegisteredEvent`.
 
 ```java
 package dddhexagonalworkshop.conference.attendees.domain.services;
@@ -259,6 +263,8 @@ import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegistere
 public record AttendeeRegistrationResult(Attendee attendee, AttendeeRegisteredEvent attendeeRegisteredEvent) {
 }
 ```
+
+### Aggregates
 
 - Create the Attendee Aggregate in attendees/domain/aggregates
     - create a single method, "registerAttendee"
@@ -272,12 +278,14 @@ public class Attendee {
 
   String email;
 
-  public static Attendee registerAttendee(String email) {
-    Attendee attendee = new Attendee();
-    attendee.email = email;
-    return attendee;
+  public static AttendeeRegistrationResult registerAttendee(String email, String firstName, String lastName, Address address) {
+      // Here you would typically perform some business logic, like checking if the attendee already exists
+      // and then create an event to publish.
+      Attendee attendee = new Attendee(email, firstName, lastName, address);
+      AttendeeRegisteredEvent event = new AttendeeRegisteredEvent(email, attendee.getFullName());
+      return new AttendeeRegistrationResult(attendee, event);
   }
-  
+
   public String getEmail(){
     return email;
   }
