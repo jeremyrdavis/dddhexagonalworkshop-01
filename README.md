@@ -387,11 +387,69 @@ public class AttendeeEndpoint {
 }
 ```
 
-## Summary
-In this first iteration, we have created the basic structure of the Attendee registration micorservice.
+## DDD Workshop Tutorial Summary
+In this iteration we implemented multiple Domain-Driven Design (DDD) concepts while building a microservice for the attendee subdomain of a conference registration system.  We used core DDD patterns including Commands, Events, Aggregates, Domain Services, Repositories, Entities, and Adapters while maintaining clean separation of concerns through the Ports and Adapters pattern.
+
+### Step-by-Step Implementation
+
+#### Step 1: Commands
+What was built: RegisterAttendeeCommand record with email field
+Key learning: Commands encapsulate requests to perform actions, are immutable, and represent intentions to change system state (unlike Events which are facts that already happened)
+
+#### Step 2: Adapters (REST Endpoint)
+What was built: AttendeeEndpoint with POST method for attendee registration
+Key learning: Adapters translate between domain models and external systems, keeping core business logic independent of technical frameworks like REST APIs
+
+#### Step 3: Data Transfer Objects
+What was built: AttendeeDTO record for API responses
+Key learning: DTOs facilitate data transfer between layers when structure differs from domain models
+
+#### Step 4: Domain Services
+What was built: AttendeeService with registerAttendee method
+Key learning: Domain Services implement functionality that doesn't naturally belong in other objects and coordinate workflows across multiple domain objects
+
+#### Step 5: Aggregates
+What was built: Attendee aggregate with registerAttendee static method
+Key learning: Aggregates are core DDD objects that represent real-world entities and encapsulate all business logic/invariants for their bounded context
+
+#### Step 6: Events
+What was built: AttendeeRegisteredEvent record with email field
+Key learning: Domain Events record business-significant occurrences and enable system-wide notifications of important state changes
+
+#### Step 7: Result Objects
+What was built: AttendeeRegistrationResult record holding both Attendee and Event
+Key learning: Result objects cleanly package multiple outputs from domain operations
+
+#### Step 8: Entities
+What was built: AttendeeEntity JPA entity for database persistence
+Key learning: Entities represent specific instances of domain objects with identities, separate from business logic aggregates
+
+#### Step 9: Repositories
+What was built: AttendeeRepository implementing PanacheRepository
+Key learning: Repositories handle all persistence operations and convert between domain aggregates and persistence entities, maintaining domain purity
+
+#### Step 10: Event Publishing Adapter
+What was built: AttendeeEventPublisher for Kafka integration
+Key learning: Event publishers are adapters that propagate domain events to external messaging systems
+
+#### Step 11: Integration Completion
+What was completed: Full integration in AttendeeEndpoint
+Key learning: All components work together to complete the registration workflow
+
+### Architecture Patterns Demonstrated
+Hexagonal Architecture/Ports and Adapters: Clean separation between core business logic and external systems (REST, Kafka, Database)
+Domain-Driven Design: Business logic encapsulated in aggregates, clear bounded contexts, and domain-centric design
+Event-Driven Architecture: System components communicate through domain events rather than direct coupling
+Key Takeaways
+
+Commands represent intentions; Events represent facts
+Aggregates contain business logic and maintain consistency
+Adapters isolate technical concerns from domain logic
+Repositories abstract persistence details from the domain
+Domain Services orchestrate complex workflows across multiple objects
 
 ### Key points
-***Hexagonal Architecture/Ports and Adapters***: The AttendeeEndpoint is a _Port_ for the registering attendees.  In our case the _Adaper_ is the Jackson library, which is built into Quarkus, and handles converting JSON to Java objects and vice versa.  
+***Hexagonal Architecture/Ports and Adapters***: The AttendeeEndpoint is an  _Outgoing Port_ for the registering attendees.  In our case the _Adaper_ is the Jackson library, which is built into Quarkus, and handles converting JSON to Java objects and vice versa.  
 The AttendeeEventPubliser is also an Adapter that sends events to Kafka, which is another Port in our architecture.  
 The AttendeeRepository is a Port that allows us to persist the AttendeeEntity to a database.
 
