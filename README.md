@@ -46,6 +46,7 @@ You can type in the code line by line or copy and paste the code provided into y
 
 
 **Quarkus**
+
 Quarkus, https://quarkus.io, is a modern Java framework designed for building cloud-native applications. It provides a set of tools and libraries that make it easy to develop, test, and deploy applications. In this workshop, we will leverage Quarkus to implement our DDD concepts and build a RESTful API for registering attendees.
 The project uses Quarkus, a Java framework that provides built-in support for REST endpoints, JSON serialization, and database access.  Quarkus also features a `Dev Mode` that automatically spins up external dependencies like Kafka and PostgreSQL, allowing you to focus on writing code without worrying about the underlying infrastructure.
 
@@ -86,12 +87,13 @@ public record RegisterAttendeeCommand(String email) {
 
 ### Adapters
 
-The `Ports and Adapters` pattern, also known as `Hexagonal Architecture`, is a design pattern that separates the core business logic from external systems. This allows the core application to remain independent of the technologies used for input/output, such as databases, message queues, or REST APIs.  The phrase was coined by Alistair Cockburn in the early 2000s.  The pattern fits well with Domain-Driven Design (DDD) because it allows the domain model to remain pure and focused on business logic, while the adapters handle the technical details of communication with external systems.
-Adapters are components that translate between the domain model and external systems or frameworks. In the context of a REST endpoint, an adapter handles the conversion of HTTP requests to commands that the domain model can process, and vice versa for responses.
+The `Ports and Adapters` pattern, also known as `Hexagonal Architecture`, is a design pattern that separates the core business logic from external systems. The phrase was coined by Alistair Cockburn in the early 2000s.  
 
-We don't need to manually convert the JSON to and from Java objects, as Quarkus provides built-in support for this using Jackson.
+The pattern fits well with Domain-Driven Design (DDD) because it allows the domain model to remain pure and focused on business logic, while the adapters handle the technical details.  This allows the core application to remain independent of the technologies used for input/output, such as databases, message queues, or REST APIs.  
 
-Create the AttendeeEndpoint in the `dddhexagonalworkshop.conference.attendees.infrastructure` package.
+Adapters are components that translate between the domain model and external systems or frameworks. In the context of a REST endpoint, an adapter handles the conversion of HTTP requests to commands that the domain model can process, and vice versa for responses. We don't need to manually convert the JSON to and from Java objects, as Quarkus provides built-in support for this using Jackson.
+
+Complete the AttendeeEndpoint in the `dddhexagonalworkshop.conference.attendees.infrastructure` package.
 
 ```java
 package dddhexagonalworkshop.conference.attendees.infrastructure;
