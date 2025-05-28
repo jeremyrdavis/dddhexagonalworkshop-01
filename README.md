@@ -85,7 +85,7 @@ public record RegisterAttendeeCommand(String email) {
 
 ```
 
-### Adapters
+### Step 2: Adapters
 
 The `Ports and Adapters` pattern, also known as `Hexagonal Architecture`, is a design pattern that separates the core business logic from external systems. The phrase was coined by Alistair Cockburn in the early 2000s.  
 
@@ -132,7 +132,7 @@ public class AttendeeEndpoint {
 
 ```
 
-### Data Transfer Objects (DTOs)
+### Step 3: Data Transfer Objects (DTOs)
 
 We also need to create a simple DTO (Data Transfer Object) to represent the attendee in the response. Data Transfer Objects are used to transfer data between layers, especially when the data structure is different from the domain model, which is why we are using it here.
 
@@ -143,7 +143,7 @@ public record AttendeeDTO(String email) {
 }
 ```
 
-### Domain Services
+### Step 4: Domain Services
 
 - Create the AttendeeService in the attendes/domain/services package
     - create one method, "registerAttendee" that takes a RegisterAttendeeCommand
@@ -166,7 +166,7 @@ public class AttendeeService {
 
 ```
 
-### Entities
+### Step 5: Entities
 
 - Create the AttendeeEntity in the attendees/persistence package
     - only one field, "email"
@@ -205,7 +205,7 @@ public class AttendeeEntity {
 }
 ```
 
-### Repositories
+### Step 6: Repositories
 
 Complete the AttendeeRepository by adding a method to persist attendees.
 
@@ -235,7 +235,7 @@ public class AttendeeRepository implements PanacheRepository<AttendeeEntity> {
 
 In this implementation the `Attendee` aggregate has no knowledge of the persistence framework.
 
-### Events
+### Step 7: Events
 
 A Domain Event is a record of some business-significant occurrence in a Bounded Context.  It is obviously significant that an attendee has registered because that one way conferences make money, but it is also signfificant because other parts of the system need to respond to the registration.
 
@@ -248,7 +248,7 @@ public record AttendeeRegisteredEvent(String email) {
 }
 ```
 
-### Creating Multiple Objects 
+### Step 8: Creating Multiple Objects 
 
 We need to create multiple objects when an attendee registers.  First, we need an `Attendee`.  Second, we need an `AttendeeRegisteredEvent`.  We will use an `AttendeeRegistrationResult` to hold both the `Attendee` and `AttendeeRegisteredEvent`. 
 
@@ -264,7 +264,7 @@ public record AttendeeRegistrationResult(Attendee attendee, AttendeeRegisteredEv
 }
 ```
 
-### Aggregates
+### Step 9: Aggregates
 
 - Create the Attendee Aggregate in attendees/domain/aggregates
     - create a single method, "registerAttendee"
@@ -293,7 +293,7 @@ public class Attendee {
 
 ```
 
-
+### Step 10: Another Adapter
 - Create the AttendeeEventPublisher
     - create a single method, "publish" that takes an AttendeeRegisteredEvent
     - implement the method by sending the event to Kafka
@@ -361,6 +361,8 @@ public class AttendeeService {
   }
 }
 ```
+
+### Step 11: Complete the registration process
 
 Update the AttendeeEndpoint to return the AttendeeDTO
 
