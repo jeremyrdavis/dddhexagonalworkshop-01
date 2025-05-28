@@ -23,8 +23,6 @@ The basic project structure is already set up for you. The project is structured
 dddhexagonalworkshop
 ├── conference
 │   └── attendees
-│       ├── api
-│       │   └── AttendeeDTO.java
 │       ├── domain
 │       │   ├── aggregates
 │       │   │   └── Attendee.java
@@ -37,6 +35,7 @@ dddhexagonalworkshop
 │       │   └── valueobjects
 │       ├── infrastructure
 │       │   ├── AttendeeEndpoint.java
+│       │   ├── AttendeeDTO.java
 │       │   └── AttendeeEventPublisher.java
 │       └── persistence
 │           ├── AttendeeEntity.java
@@ -46,7 +45,7 @@ As you progress through the workshop, you will fill in the missing pieces of cod
 You can type in the code line by line or copy and paste the code provided into your IDE. You can also combine the approaches as you see fit. The goal is to understand the concepts and how they fit together in a DDD context.
 
 
-***Quarkus*** 
+**Quarkus**
 Quarkus, https://quarkus.io, is a modern Java framework designed for building cloud-native applications. It provides a set of tools and libraries that make it easy to develop, test, and deploy applications. In this workshop, we will leverage Quarkus to implement our DDD concepts and build a RESTful API for registering attendees.
 The project uses Quarkus, a Java framework that provides built-in support for REST endpoints, JSON serialization, and database access.  Quarkus also features a `Dev Mode` that automatically spins up external dependencies like Kafka and PostgreSQL, allowing you to focus on writing code without worrying about the underlying infrastructure.
 
