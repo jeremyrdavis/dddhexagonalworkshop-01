@@ -1,85 +1,361 @@
-# ddd-attendees
+# Workshop Workflow
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+## Iteration 01: End to end DDD
+### DDD Concepts: Commands, Events, Aggregates, Domain Services, Repositories, Entities
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+### Overview
 
-## Running the application in dev mode
+**Introduction:**
+In this iteration, we will cover the basics of Domain-Driven Design by implementing a basic workflow for registering a conference attendee. We will create the following DDD constructs:
+- Aggregate
+- Domain Service
+- Domain Event
+- Command
+- Adapter
+- Entity
+- Repository
 
-You can run your application in dev mode that enables live coding using:
+We will alss use the `Hexangonal Architecture`, or `Ports and Adapters` pattern to integrate with external systems, ensuring a clean separation of concerns.
 
-```shell script
-./mvnw quarkus:dev
+**Steps:**
+1. Create a `RegisterAttendeeCommand` with only one, basic property (email).
+2. Implement an Adapter in the form of a REST Endpoint, `AttendeeEndpoint` with a POST method.
+3. Implement a Service, `AttendeeService` that will orchestration the registration process.
+4. Create an `Attendee` entity that represents the attendee in the domain and implements the application's invariants or business rules.
+4. Create a Domain Event, `AttendeeRegisteredEvent`, that will be published when an attendee is successfully registered.
+5. Create a Repository interface, `AttendeeRepository`, that defines methods for saving and retrieving attendees.
+6. Create an Entity, `AttendeeEntity`, to persist instances of the `Attendee` entity in a database.
+7. Create an Adapter, `AttendeeEventPublisher`, that sends events to Kafka to propagate changes to the rest of the system.
+
+**Summary:**
+By the end of Iteration 1, you'll have a solid foundation in DDD concepts and a very basic working application.
+
+**Note:** You can type in the code line by line or copy and paste the code provided into your IDE. You can also combine the approaches as you see fit. The goal is to understand the concepts and how they fit together in a DDD context.
+
+
+### Commands
+
+Commands are objects that encapsulate a request to perform an action. They are different from Events because Commands can fail or be rejected, while Events are statements of fact that have already happened.
+
+We will start by creating a command to register an attendee. This command will encapsulate the data needed to register an attendee, which in this iteration is just the email address.
+
+Update the RegisterAttendeeCommand object with a single String, "email."
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain.services;
+
+public record RegisterAttendeeCommand(String email) {
+}
+
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+### Adapters
 
-## Packaging and running the application
+Adapters are components that translate between the domain model and external systems or frameworks. In the context of a REST endpoint, an adapter handles the conversion of HTTP requests to commands that the domain model can process, and vice versa for responses.
 
-The application can be packaged using:
+We don't need to manually convert the JSON to and from Java objects, as Quarkus provides built-in support for this using Jackson.
 
-```shell script
-./mvnw package
+Create the AttendeeEndpoint in the `dddhexagonalworkshop.conference.attendees.infrastructure` package.
+
+```java
+package dddhexagonalworkshop.conference.attendees.infrastructure;
+
+import dddhexagonalworkshop.conference.attendees.api.AttendeeDTO;
+import dddhexagonalworkshop.conference.attendees.dddhexagonalworkshop.conference.attendees.domain.services.AttendeeService;
+import dddhexagonalworkshop.conference.attendees.dddhexagonalworkshop.conference.attendees.domain.services.RegisterAttendeeCommand;
+import io.quarkus.logging.Log;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+
+import java.net.URI;
+
+@Path("/attendees")
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
+public class AttendeeEndpoint {
+
+  @Inject
+  AttendeeService attendeeService;
+
+  @POST
+  public Response registerAttendee(RegisterAttendeeCommand registerAttendeeCommand) {
+    Log.debugf("Creating attendee %s", registerAttendeeCommand);
+
+    AttendeeDTO attendeeDTO = attendeeService.registerAttendee(registerAttendeeCommand);
+
+    Log.debugf("Created attendee %s", attendeeDTO);
+
+    return Response.created(URI.create("/" + attendeeDTO.email())).entity(attendeeDTO).build();
+  }
+
+}
+
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+### Data Transfer Objects (DTOs)
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
+We also need to create a simple DTO (Data Transfer Object) to represent the attendee in the response. Data Transfer Objects are used to transfer data between layers, especially when the data structure is different from the domain model, which is why we are using it here.
 
-If you want to build an _über-jar_, execute the following command:
+```java
+package dddhexagonalworkshop.conference.attendees.infrastrcture;
 
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
+public record AttendeeDTO(String email) {
+}
 ```
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+### Domain Services
 
-## Creating a native executable
+- Create the AttendeeService in the attendes/domain/services package
+    - create one method, "registerAttendee" that takes a RegisterAttendeeCommand
 
-You can create a native executable using:
+```java
+package domain.services;
 
-```shell script
-./mvnw package -Dnative
+import dddhexagonalworkshop.conference.attendees.infrastrcture.AttendeeDTO;
+import jakarta.enterprise.context.ApplicationScoped;
+
+@ApplicationScoped
+public class AttendeeService {
+
+    public AttendeeDTO registerAttendee(RegisterAttendeeCommand registerAttendeeAttendeeCommand) {
+        // Logic to register an attendee
+        // This is a placeholder implementation
+        return new AttendeeDTO(registerAttendeeAttendeeCommand.email());
+    }
+}
+
 ```
 
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
+### Entities
 
-```shell script
-./mvnw package -Dnative -Dquarkus.native.container-build=true
+- Create the AttendeeEntity in the attendees/persistence package
+    - only one field, "email"
+
+```java
+package dddhexagonalworkshop.conference.attendees.persistence;
+
+import dddhexagonalworkshop.conference.attendees.api.AddressDTO;
+import dddhexagonalworkshop.conference.attendees.domain.valueobjects.Badge;
+import jakarta.persistence.*;
+
+@Entity @Table(name = "attendee")
+public class AttendeeEntity {
+
+    @Id @GeneratedValue
+    private Long id;
+
+    private String email;
+
+    protected AttendeeEntity() {
+
+    }
+
+    protected AttendeeEntity(String email) {
+        this.email = email;
+    }
+
+    protected Long getId() {
+        return id;
+    }
+
+    protected String getEmail() {
+        return email;
+    }
+
+}
 ```
 
-You can then execute your native executable with: `./target/ddd-attendees-0.0.1-SNAPSHOT-runner`
+### Repositories
 
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+- Create the AttendeeRegistredEvent in the domain/events package
+    - create a single field, "email"
 
-## Related Guides
+```java
+package dddhexagonalworkshop.conference.attendees.domain.events;
 
-- Hibernate ORM with Panache ([guide](https://quarkus.io/guides/hibernate-orm-panache)): Simplify your persistence code for Hibernate ORM via the active record or the repository pattern
-- REST Jackson ([guide](https://quarkus.io/guides/rest#json-serialisation)): Jackson serialization support for Quarkus REST. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it
-- Messaging - Kafka Connector ([guide](https://quarkus.io/guides/kafka-getting-started)): Connect to Kafka with Reactive Messaging
-- JDBC Driver - PostgreSQL ([guide](https://quarkus.io/guides/datasource)): Connect to the PostgreSQL database via JDBC
+public record AttendeeRegisteredEvent(String email) {
+}
+```
 
-## Provided Code
+- Create the AttendeeRegistrationResult in the attendees/domain/services package
+    - create two fields, "attendee" and "attendeeRegistrationEvent"
 
-### Hibernate ORM
+```java
+package dddhexagonalworkshop.conference.attendees.domain.services;
 
-Create your first JPA entity
+import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
+import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegisteredEvent;
 
-[Related guide section...](https://quarkus.io/guides/hibernate-orm)
+public record AttendeeRegistrationResult(Attendee attendee, AttendeeRegisteredEvent attendeeRegisteredEvent) {
+}
+```
 
-[Related Hibernate with Panache section...](https://quarkus.io/guides/hibernate-orm-panache)
+- Create the Attendee Aggregate in attendees/domain/aggregates
+    - create a single method, "registerAttendee"
+    - implement the method
+        - by creating an AttendeeEntity and an AttendeeRegistredEvent
+        - Create the AttendeeRegistrationResult in the attendees/domain/services package to return the AttendeeEntity and AttendeeRegisteredEvent
+```java
+package dddhexagonalworkshop.conference.attendees.domain;
+
+public class Attendee {
+
+  String email;
+
+  public static Attendee registerAttendee(String email) {
+    Attendee attendee = new Attendee();
+    attendee.email = email;
+    return attendee;
+  }
+  
+  public String getEmail(){
+    return email;
+  }
+}
+
+```
+
+- Create the AttendeeRepository using Hibernate Panache
+
+```java
+package dddhexagonalworkshop.conference.attendees.persistence;
+
+import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+
+public class AttendeeRepository implements PanacheRepository<AttendeeEntity> {
 
 
-### Messaging codestart
+  public void persist(Attendee aggregate) {
+    // transform the aggregate to an entity
+    AttendeeEntity attendeeEntity = fromAggregate(aggregate);
+    persist(attendeeEntity);
+  }
 
-Use Quarkus Messaging
+  private AttendeeEntity fromAggregate(Attendee attendee) {
+    AttendeeEntity entity = new AttendeeEntity(attendee.getEmail());
+    return entity;
+  }
+}
+```
 
-[Related Apache Kafka guide section...](https://quarkus.io/guides/kafka-reactive-getting-started)
+- Create the AttendeeEventPublisher
+    - create a single method, "publish" that takes an AttendeeRegisteredEvent
+    - implement the method by sending the event to Kafka
+
+```java
+package dddhexagonalworkshop.conference.attendees.infrastrcture;
+
+import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegisteredEvent;
+import jakarta.enterprise.context.ApplicationScoped;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
+
+@ApplicationScoped
+public class AttendeeEventPublisher {
+
+  @Channel("attendees")
+  public Emitter<AttendeeRegisteredEvent> attendeesTopic;
+
+  public void publish(AttendeeRegisteredEvent attendeeRegisteredEvent) {
+    attendeesTopic.send(attendeeRegisteredEvent);
+  }
+}
+```
+
+- Update the AttendeeService so that it persists the attendee and publishes the event
+    - update the registerAttendee method to return an AttendeeRegistratedResult
+    - update the registerAttendee method to call the AttendeeEventPublisher
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain.services;
+
+import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
+import dddhexagonalworkshop.conference.attendees.infrastrcture.AttendeeDTO;
+import dddhexagonalworkshop.conference.attendees.infrastrcture.AttendeeEventPublisher;
+import dddhexagonalworkshop.conference.attendees.persistence.AttendeeRepository;
+import io.quarkus.narayana.jta.QuarkusTransaction;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+@ApplicationScoped
+public class AttendeeService {
+
+  @Inject
+  AttendeeRepository attendeeRepository;
+
+  @Inject
+  AttendeeEventPublisher attendeeEventPublisher;
+
+  @Transactional
+  public AttendeeDTO registerAttendee(RegisterAttendeeCommand registerAttendeeAttendeeCommand) {
+    // Logic to register an attendee
+    AttendeeRegistrationResult result = Attendee.registerAttendee(registerAttendeeAttendeeCommand.email());
 
 
-### REST
+    //persist the attendee
+    QuarkusTransaction.requiringNew().run(() -> {
+      attendeeRepository.persist(result.attendee());
+    });
 
-Easily start your REST Web Services
+    //notify the system that a new attendee has been registered
+    attendeeEventPublisher.publish(result.attendeeRegisteredEvent());
 
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+    return new AttendeeDTO(result.attendee().getEmail());
+  }
+}
+```
+
+Update the AttendeeEndpoint to return the AttendeeDTO
+
+```java
+package dddhexagonalworkshop.conference.attendees.infrastrcture;
+
+import dddhexagonalworkshop.conference.attendees.domain.services.AttendeeService;
+import dddhexagonalworkshop.conference.attendees.domain.services.RegisterAttendeeCommand;
+import io.quarkus.logging.Log;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+
+import java.net.URI;
+
+@Path("/attendees")
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
+public class AttendeeEndpoint {
+
+    @Inject
+    AttendeeService attendeeService;
+
+    @POST
+    public Response registerAttendee(RegisterAttendeeCommand registerAttendeeCommand) {
+        Log.debugf("Creating attendee %s", registerAttendeeCommand);
+
+        AttendeeDTO attendeeDTO = attendeeService.registerAttendee(registerAttendeeCommand);
+
+        Log.debugf("Created attendee %s", attendeeDTO);
+
+        return Response.created(URI.create("/" + attendeeDTO.email())).entity(attendeeDTO).build();
+    }
+
+}
+```
+
+## Summary
+In this first iteration, we have created the basic structure of the Attendee registration micorservice.
+
+### Key points
+***Hexagonal Architecture/Ports and Adapters***: The AttendeeEndpoint is a _Port_ for the registering attendees.  In our case the _Adaper_ is the Jackson library, which is built into Quarkus, and handles converting JSON to Java objects and vice versa.  
+The AttendeeEventPubliser is also an Adapter that sends events to Kafka, which is another Port in our architecture.  
+The AttendeeRepository is a Port that allows us to persist the AttendeeEntity to a database.
+
+***Aggregates*** Business logic is implemented in an Aggregate, Attendee. The Aggregate is responsible for creating the AttendeeEntity and the AttendeeRegisteredEvent.
+
+***Commands*** we use a Command object, RegisterAttendeeCommand, to encapsulate the data needed to register an attendee.  Commands are different from Events because Commands can fail or be rejected, while Events are statements of fact that have already happened.
+
+***Events*** we use an Event, AttendeeRegisteredEvent, to notify other parts of the system that an attendee has been registered.  Events are statements of fact that have already happened and cannot be changed.
