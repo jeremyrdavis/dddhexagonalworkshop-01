@@ -16,7 +16,7 @@ In this iteration, we will cover the basics of Domain-Driven Design by implement
 - Entity
 - Repository
 
-We will alss use the `Hexangonal Architecture`, or `Ports and Adapters` pattern to integrate with external systems, ensuring a clean separation of concerns.
+We will also use the `Hexangonal Architecture`, or `Ports and Adapters` pattern to integrate with external systems, ensuring a clean separation of concerns.
 
 The basic project structure is already set up for you. The project is structured as follows:
 
