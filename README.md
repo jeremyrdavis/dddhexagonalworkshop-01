@@ -200,9 +200,38 @@ public class Attendee {
 }
 
 ```
+### Step 7: Events
 
+A Domain Event is a record of some business-significant occurrence in a Bounded Context.  It is obviously significant that an attendee has registered because that one way conferences make money, but it is also signfificant because other parts of the system need to respond to the registration.
+
+For this iteration, we will use a minimal event with only the attendee's email address.  Update the AttendeeRegistrationEvent with the email:
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain.events;
+
+public record AttendeeRegisteredEvent(String email) {
+}
+```
+
+### Step 8: Creating Multiple Objects 
+
+We need to create multiple objects when an attendee registers.  First, we need an `Attendee`.  Second, we need an `AttendeeRegisteredEvent`.  We will use an `AttendeeRegistrationResult` to hold both the `Attendee` and `AttendeeRegisteredEvent`. 
+
+Complete the `AttendeeRegistrationResult` by adding an `Attendee` and an `AttendeeRegisteredEvent`.
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain.services;
+
+import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
+import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegisteredEvent;
+
+public record AttendeeRegistrationResult(Attendee attendee, AttendeeRegisteredEvent attendeeRegisteredEvent) {
+}
+```
 
 ### Step 5: Entities
+
+In Domain Driven Design all persistence is handled by a Repository, and we will therefore use a Repository.  Before we create the Repository we need an Entity.  Entities represent a specific instance of a Domain Object, and they have identities.
 
 - Create the AttendeeEntity in the attendees/persistence package
     - only one field, "email"
@@ -241,34 +270,8 @@ public class AttendeeEntity {
 }
 ```
 
-### Step 7: Events
 
-A Domain Event is a record of some business-significant occurrence in a Bounded Context.  It is obviously significant that an attendee has registered because that one way conferences make money, but it is also signfificant because other parts of the system need to respond to the registration.
 
-For this iteration, we will use a minimal event with only the attendee's email address.  Update the AttendeeRegistrationEvent with the email:
-
-```java
-package dddhexagonalworkshop.conference.attendees.domain.events;
-
-public record AttendeeRegisteredEvent(String email) {
-}
-```
-
-### Step 8: Creating Multiple Objects 
-
-We need to create multiple objects when an attendee registers.  First, we need an `Attendee`.  Second, we need an `AttendeeRegisteredEvent`.  We will use an `AttendeeRegistrationResult` to hold both the `Attendee` and `AttendeeRegisteredEvent`. 
-
-Complete the `AttendeeRegistrationResult` by adding an `Attendee` and an `AttendeeRegisteredEvent`.
-
-```java
-package dddhexagonalworkshop.conference.attendees.domain.services;
-
-import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
-import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegisteredEvent;
-
-public record AttendeeRegistrationResult(Attendee attendee, AttendeeRegisteredEvent attendeeRegisteredEvent) {
-}
-```
 
 
 ### Step 6: Repositories
@@ -300,8 +303,6 @@ public class AttendeeRepository implements PanacheRepository<AttendeeEntity> {
 ```
 
 In this implementation the `Attendee` aggregate has no knowledge of the persistence framework.
-
-
 
 ### Step 10: Another Adapter
 - Create the AttendeeEventPublisher
