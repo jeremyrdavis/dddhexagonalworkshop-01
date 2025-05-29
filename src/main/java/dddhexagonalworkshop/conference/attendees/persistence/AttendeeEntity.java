@@ -1,8 +1,6 @@
 package dddhexagonalworkshop.conference.attendees.persistence;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 /**
  * "An Entity models an individual thing. Each Entity has a unique identity in that you can
@@ -11,14 +9,15 @@ import jakarta.persistence.Id;
  *
  */
 @Entity
+@Table(name = "attendee")
 public class AttendeeEntity {
 
+    /**
+     * Database primary key - technical identity for persistence.
+     * This is different from business identity (email) in the domain model.
+     */
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /* Default, no-arg constructor required by Hibernate, which we are using as our JPA provider.
-     */
-    protected AttendeeEntity() {
-    }
 }

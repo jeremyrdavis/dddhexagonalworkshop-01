@@ -559,7 +559,7 @@ public class Attendee {
 After implementing the aggregate, verify it works correctly:
 
 ```bash
-mvn test -Dtest=AggregateTest
+mvn test -Dtest=AttendeeTest
 ```
 
 ### Aggregate Patterns in Practice
@@ -593,49 +593,285 @@ mvn test -Dtest=AggregateTest
 **A:** It depends. For event-sourced systems, immutable aggregates work well. For traditional CRUD, controlled mutability (like our example) is common.
 
 ### Next Steps
-In the next step, we'll create the AttendeeService that will orchestrate the registration workflow. The service will receive the RegisterAttendeeCommand, call our aggregate's registerAttendee() method, and handle the returned AttendeeRegistrationResult by persisting the attendee and publishing the event.
+In the next step, we'll create the AttendeeEntity that will persist an instance of an Attendee.
 
+## Step 5: Entities
 
+In Domain-Driven Design, all persistence is handled by repositories, and before we create the repository, we need a persistence entity. Entities represent specific instances of domain objects with database identities.
 
+### Learning Objectives
 
+- Understand the difference between Domain Aggregates and Persistence Entities
+- Implement AttendeeEntity for database persistence using JPA annotations
+- Apply the separation between domain logic and persistence concerns
+- Connect domain aggregates to database storage through persistence entities
 
-## Step 4: Aggregates
+### What You'll Build
 
-#### Why Aggregates?
+An AttendeeEntity JPA entity that represents how attendee data is stored in the database, separate from the domain logic in the Attendee aggregate.
 
-Without aggregates, business logic gets scattered across services and entities.
-Aggregates ensure that all business rules for a concept (like Attendee registration)
-are centralized and consistently enforced.
+### Why Separate Persistence Entities?
 
-Aggregates are the core objects in Domain Driven Design. An Aggregate represents the most important object or objects in our bounded context.
-We are implementing the Attendees Bounded Context, and the Attendee is the most important object in this Bounded Context.
+This separation solves several critical problems in domain-driven applications:
+Domain Purity: Your domain aggregates stay focused on business logic without being polluted by persistence concerns:
 
-An Aggregate both represents the real world object, a conference attendee in this case, and encapsulates all of the invariants, or business logic, associated with the object. In this iteration, we will implement business logic to notify the rest of the system about an attendee's registration.
-
-Update the Attendee Aggregate in attendees/domain/aggregates so that the `registerAttendee` method creates and returns an instance of `Attendee` and an `AttendeeRegisteredEvent` that will be used to notify the rest of the system. We will also need to create an object to hold both the `Attendee` and `AttendeeRegisteredEvent`, `AttendeeRegistrationResult`. Do not worry if your class does not compile immediately. We will create the other objects in the next step.
-
-Implement the `registerAttendee` method by creating an AttendeeEntity and an AttendeeRegisteredEvent. Instantiate an `AttendeeRegistrationResult` with the newly created objects and return the `AttendeeRegistrationResult`.
+❌ Domain aggregate mixed with persistence concerns
 
 ```java
-package dddhexagonalworkshop.conference.attendees.domain;
 
+@Entity @Table(name = "attendees")
 public class Attendee {
+@Id @GeneratedValue
+private Long id;  // Database concern, not business concern
 
-  String email;
+    @Column(name = "email_address", length = 255)
+    private String email;  // Database annotations in domain model
+    
+    public static AttendeeRegistrationResult registerAttendee(String email) {
+        // Business logic mixed with persistence annotations
+    }
+}
+java// ✅ Clean separation of concerns
+// Domain Aggregate (business logic only)
+public class Attendee {
+private final String email;
 
-  public static AttendeeRegistrationResult registerAttendee(String email, String firstName, String lastName, Address address) {
-      // Here you would typically perform some business logic, like checking if the attendee already exists
-      // and then create an event to publish.
-      Attendee attendee = new Attendee(email, firstName, lastName, address);
-      AttendeeRegisteredEvent event = new AttendeeRegisteredEvent(email, attendee.getFullName());
-      return new AttendeeRegistrationResult(attendee, event);
+    public static AttendeeRegistrationResult registerAttendee(String email) {
+        // Pure business logic, no persistence concerns
+    }
+}
+```
+```java
+// Persistence Entity (database concerns only)
+@Entity @Table(name = "attendees")
+public class AttendeeEntity {
+@Id @GeneratedValue
+private Long id;
+
+    @Column(name = "email")
+    private String email;
+    
+    // No business logic, just persistence mapping
+}
+```
+- Technology Independence: Your domain model isn't tied to any specific database or ORM framework. You could switch from JPA to MongoDB without changing your business logic.
+- Testing Simplicity: Domain logic can be tested without database setup, while persistence logic can be tested separately with database integration tests.
+- Evolution Independence: Database schema changes don't require changes to domain logic, and business rule changes don't require database migrations.
+
+### Entities vs Aggregates: Key Differences
+- AspectDomain AggregatePersistence EntityPurposeBusiness logic & rulesData storage mappingDependenciesPure Java, domain conceptsJPA, database annotationsIdentityBusiness identity (email)Technical identity (database ID)LifecycleCreated by business operationsCreated/loaded by ORMMutabilityControlled by business rulesManaged by persistence frameworkTestingUnit tests, no databaseIntegration tests with database
+
+### Implementation
+
+```java
+package dddhexagonalworkshop.conference.attendees.persistence;
+
+import jakarta.persistence.*;
+
+/**
+* JPA Entity for persisting Attendee data to the database.
+* This class is purely concerned with data storage and mapping,
+* containing no business logic. It serves as the bridge between
+* our domain model and the relational database.
+  */
+  @Entity
+  @Table(name = "attendee")
+  public class AttendeeEntity {
+
+  /**
+    * Database primary key - technical identity for persistence.
+    * This is different from business identity (email) in the domain model.
+      */
+      @Id
+      @GeneratedValue(strategy = GenerationType.IDENTITY)
+      private Long id;
+
+  /**
+    * Business data mapped to database column.
+    * Keep column names simple and clear.
+      */
+      @Column(name = "email", nullable = false, unique = true)
+      private String email;
+
+  /**
+    * Default no-argument constructor required by Hibernate/JPA.
+    * Protected visibility prevents direct instantiation while
+    * allowing framework access.
+      */
+      protected AttendeeEntity() {
+      // Required by JPA specification
+      }
+
+  /**
+    * Constructor for creating new entity instances.
+    * Package-private to control creation within persistence layer.
+    *
+    * @param email The attendee's email address
+      */
+      protected AttendeeEntity(String email) {
+      this.email = email;
+      }
+
+  /**
+    * Getter for database ID.
+    * Protected because external code shouldn't depend on database IDs.
+      */
+      protected Long getId() {
+      return id;
+      }
+
+  /**
+    * Getter for email.
+    * Protected to keep access controlled within persistence layer.
+      */
+      protected String getEmail() {
+      return email;
+      }
+
+  /**
+    * String representation for debugging.
+      */
+      @Override
+      public String toString() {
+          return "AttendeeEntity{" +
+          "id=" + id +
+          ", email='" + email + '\'' +
+          '}';
+      }
+  }
+```
+
+### Key Design Decisions
+**Protected Constructors:** The default constructor is required by JPA, while the parameterized constructor allows controlled creation. Both are protected to limit access.
+**Protected Methods:** Getters and setters are protected, not public. Only the repository layer should interact with entities directly.
+**No Business Logic:** The entity contains no validation or business rules - that's the aggregate's responsibility.
+**Simple Mapping:** We start with basic column mapping. Real applications might have more complex relationships and constraints.
+
+### Database Schema
+
+This entity will create a database table like:
+
+```sql
+    CREATE TABLE attendee (
+
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+          email VARCHAR(255) NOT NULL UNIQUE
+          );
+```
+The unique constraint on email ensures data integrity at the database level, complementing the business rules in the aggregate.
+
+### Testing Your Implementation 
+
+After implementing the entity, verify it works correctly:
+
+```bash
+mvn test -Dtest=AttendeeEntityTest
+```
+
+// Test different emails are not equal
+AttendeeEntity entity3 = new AttendeeEntity("different@example.com");
+assert !entity1.equals(entity3) : "Entities with different emails should not be equal";
+
+// Test toString for debugging
+System.out.println("Entity: " + entity1);
+For database integration testing (you'll do this later with the repository):
+java@Test
+@Transactional
+void testEntityPersistence() {
+AttendeeEntity entity = new AttendeeEntity("persist@example.com");
+
+    entityManager.persist(entity);
+    entityManager.flush();
+    
+    assert entity.getId() != null : "ID should be generated after persistence";
+    
+    AttendeeEntity loaded = entityManager.find(AttendeeEntity.class, entity.getId());
+    assert loaded.getEmail().equals("persist@example.com");
+}
+Connection to Other Components
+This entity will be:
+
+Created by the AttendeeRepository when converting from domain aggregates
+Persisted to the database using JPA/Hibernate
+Loaded from the database when retrieving attendees
+Converted back to domain aggregates by the repository
+
+Mapping Patterns
+Simple Mapping: Our current approach with basic fields and annotations.
+Complex Relationships: Real applications might have:
+java@Entity
+public class AttendeeEntity {
+@OneToMany(mappedBy = "attendee", cascade = CascadeType.ALL)
+private List<RegistrationEntity> registrations;
+
+    @Embedded
+    private AddressEntity address;
+    
+    @Enumerated(EnumType.STRING)
+    private AttendeeStatus status;
+}
+Value Objects: Embedded objects for complex data:
+java@Embeddable
+public class AddressEntity {
+private String street;
+private String city;
+private String zipCode;
+}
+Real-World Considerations
+Performance: Use appropriate fetch strategies and indexing:
+java@Index(name = "idx_attendee_email", columnList = "email")
+@Table(name = "attendee", indexes = {@Index(name = "idx_attendee_email", columnList = "email")})
+Auditing: Track creation and modification times:
+java@CreationTimestamp
+private LocalDateTime createdAt;
+
+@UpdateTimestamp
+private LocalDateTime updatedAt;
+Versioning: Handle concurrent modifications:
+java@Version
+private Long version;
+Soft Deletes: Instead of physical deletion:
+java@Column(name = "deleted_at")
+private LocalDateTime deletedAt;
+Common Questions
+Q: Why not just use the domain aggregate as a JPA entity?
+A: It violates single responsibility principle and couples domain logic to persistence technology. Changes in business rules would require database considerations and vice versa.
+Q: Should entities contain validation logic?
+A: No, validation belongs in the domain aggregate. Entities are just data containers for persistence.
+Q: Can entities reference other entities?
+A: Yes, but keep relationships simple and consider the performance implications of joins and lazy loading.
+Q: How do I handle complex domain objects with many fields?
+A: Start simple and evolve. Use embedded objects (@Embeddable) for value objects and separate entities for other aggregates.
+Q: Should I use the same entity for reading and writing?
+A: For simple cases, yes. For complex scenarios, consider separate read/write models (CQRS pattern).
+Next Steps
+In the next step, we'll create the AttendeeRepository that bridges between our domain aggregates and these persistence entities. The repository will handle converting Attendee aggregates to AttendeeEntity objects for storage, and vice versa for retrieval, maintaining the clean separation between domain and persistence concerns.
+### Step 6: Repositories
+
+Complete the AttendeeRepository by adding a method to persist attendees.
+
+You have probably noticed that our 'AttendeeRepository`implements`PanacheRepository<AttendeeEntity>`.  `PanacheRepository' provides methods for manipulating JPA Entities; however, following DDD guidelines, the Repository will be the only persistence class that other objects can access. To this end we need methods that take an `Attendee` and convert it to an `AttendeeEntity`.
+
+```java
+package dddhexagonalworkshop.conference.attendees.persistence;
+
+import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+
+public class AttendeeRepository implements PanacheRepository<AttendeeEntity> {
+
+
+  public void persist(Attendee aggregate) {
+    // transform the aggregate to an entity
+    AttendeeEntity attendeeEntity = fromAggregate(aggregate);
+    persist(attendeeEntity);
   }
 
-  public String getEmail(){
-    return email;
+  private AttendeeEntity fromAggregate(Attendee attendee) {
+    AttendeeEntity entity = new AttendeeEntity(attendee.getEmail());
+    return entity;
   }
 }
-
 ```
 
 
@@ -704,75 +940,6 @@ public class AttendeeService {
     }
 }
 
-```
-
-### Step 5: Entities
-
-In Domain Driven Design all persistence is handled by a Repository, and we will therefore use a Repository. Before we create the Repository we need an Entity. Entities represent a specific instance of a Domain Object, and they have identities.
-
-- Create the AttendeeEntity in the attendees/persistence package
-  - only one field, "email"
-
-```java
-package dddhexagonalworkshop.conference.attendees.persistence;
-
-import dddhexagonalworkshop.conference.attendees.api.AddressDTO;
-import dddhexagonalworkshop.conference.attendees.domain.valueobjects.Badge;
-import jakarta.persistence.*;
-
-@Entity @Table(name = "attendee")
-public class AttendeeEntity {
-
-    @Id @GeneratedValue
-    private Long id;
-
-    private String email;
-
-    protected AttendeeEntity() {
-
-    }
-
-    protected AttendeeEntity(String email) {
-        this.email = email;
-    }
-
-    protected Long getId() {
-        return id;
-    }
-
-    protected String getEmail() {
-        return email;
-    }
-
-}
-```
-
-### Step 6: Repositories
-
-Complete the AttendeeRepository by adding a method to persist attendees.
-
-You have probably noticed that our 'AttendeeRepository`implements`PanacheRepository<AttendeeEntity>`.  `PanacheRepository' provides methods for manipulating JPA Entities; however, following DDD guidelines, the Repository will be the only persistence class that other objects can access. To this end we need methods that take an `Attendee` and convert it to an `AttendeeEntity`.
-
-```java
-package dddhexagonalworkshop.conference.attendees.persistence;
-
-import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
-
-public class AttendeeRepository implements PanacheRepository<AttendeeEntity> {
-
-
-  public void persist(Attendee aggregate) {
-    // transform the aggregate to an entity
-    AttendeeEntity attendeeEntity = fromAggregate(aggregate);
-    persist(attendeeEntity);
-  }
-
-  private AttendeeEntity fromAggregate(Attendee attendee) {
-    AttendeeEntity entity = new AttendeeEntity(attendee.getEmail());
-    return entity;
-  }
-}
 ```
 
 In this implementation the `Attendee` aggregate has no knowledge of the persistence framework.
