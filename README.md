@@ -82,6 +82,7 @@ Let's get coding!
 An AttendeeRegisteredEvent record that captures the fact that an attendee has successfully registered for the conference.
 
 **Why Domain Events Matter**
+
 - Domain Events solve several critical problems in distributed systems:
 - Business Communication: Events represent facts that have already happened in the business domain. Events are immutable statements of truth.
 - System Decoupling: When an attendee registers, multiple things might need to happen:
@@ -95,7 +96,7 @@ An AttendeeRegisteredEvent record that captures the fact that an attendee has su
 **Implementation**
 
 A Domain Event is a record of some business-significant occurrence in a Bounded Context. It's obviously significant that an attendee has registered because that's how conferences make money, but it's also significant because other parts of the system need to respond to the registration.
-For this iteration, we'll use a minimal event with only the attendee's email address. Update the AttendeeRegisteredEvent with the email:
+For this iteration, we'll use a minimal event with only the attendee's email address. Update  `AttendeeRegisteredEvent.java` with the email:
 
 ```java
 package dddhexagonalworkshop.conference.attendees.domain.events;
@@ -103,6 +104,8 @@ package dddhexagonalworkshop.conference.attendees.domain.events;
 public record AttendeeRegisteredEvent(String email) {
 }
 ```
+
+***Note:*** Deleting and recreating the file is fine if you prefer to start fresh. Just ensure the package structure matches the one in the project.
 
 **Key Design Decisions**
 
@@ -119,10 +122,13 @@ Why only email? In this iteration, we're keeping it simple. In real systems, you
 
 **Testing Your Implementation**
 
-After implementing the event, verify it compiles and the basic structure is correct:
-java// This should compile without errors
-AttendeeRegisteredEvent event = new AttendeeRegisteredEvent("test@example.com");
-System.out.println("Event created: " + event);
+After implementing the event, verify it compiles and the basic structure is correct.  There is a JUnit test, `AttendeeRegisteredEventTest.java` which can be run in your IDE or from the commd line with:
+
+```bash
+mvn test -Dtest=AttendeeRegisteredEventTest
+```
+
+The test should pass, confirming that the `AttendeeRegisteredEvent` record is correctly defined and can be instantiated with an email address.
 
 ## Step 2: Commands
 **Learning Objective**: Understand how commands encapsulate business intentions
