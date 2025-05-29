@@ -320,8 +320,76 @@ public class AttendeeEndpoint {
 }
 
 ```
+## Step 3: Returning Multiple Objects
 
-### Step 3: Data Transfer Objects (DTOs)
+***Note:*** This step is not specific to Domain Driven Design.  This is simply a useful coding practice.
+
+### Learning Objectives
+
+- Understand how Result objects cleanly package multiple outputs from domain operations
+- Implement AttendeeRegistrationResult to encapsulate both domain state and events
+
+### What You'll Build
+
+An AttendeeRegistrationResult Record that packages together both the created Attendee aggregate and the AttendeeRegisteredEvent that needs to be published.
+
+### Why Result Objects Matter
+- Multiple Return Values: Operations often need to return more than one thing. When an attendee registers, we need:
+  -- The created Attendee (to persist to database)
+  -- The AttendeeRegisteredEvent (to publish to other systems)
+  -- Type Safety: Rather than returning generic collections or maps, result objects provide compile-time safety and clear naming.
+  -- Potentially validation results, warnings, or metadata
+
+We need to create an object that holds both the Attendee aggregate and the AttendeeRegisteredEvent that were created during the registration process.
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain.services;
+import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
+import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegisteredEvent;
+
+/**
+* Result object that packages the outputs of attendee registration.
+* Contains both the domain state (Attendee) and the domain event
+* (AttendeeRegisteredEvent) that need different handling by the service layer.
+  */
+  public record AttendeeRegistrationResult(Attendee attendee, AttendeeRegisteredEvent attendeeRegisteredEvent) {
+
+  /**
+    * Compact constructor for validation.
+    * Ensures both components are present since registration should
+    * always produce both an attendee and an event.
+      */
+      public AttendeeRegistrationResult {
+          if (attendee == null) {
+          throw new IllegalArgumentException("Attendee cannot be null");
+          }
+          if (attendeeRegisteredEvent == null) {
+          throw new IllegalArgumentException("AttendeeRegisteredEvent cannot be null");
+      }
+  }
+}
+```
+***Note:*** The `AttendeeRegistrationResult` will not compile until we implement the `Attendee` aggregate. This is intentional to guide you through the process of building the domain model step by step.  It will compile after the next step when we implement the `Attendee` aggregate.
+
+### Key Design Decisions
+
+**Why a record?** Records are perfect for result objects because:
+- They're immutable (results shouldn't change after creation)
+- They provide automatic equals/hashCode for testing
+- They have clear, readable toString() methods
+- Component accessors are automatically generated
+
+**Why validate in constructor?** Since this represents a successful operation, both components should always be present. The validation ensures we catch programming errors early.
+**Package placement?** Result objects live with the service that uses them, since they're part of the service's API contract.
+**Naming convention?** Result objects typically follow the pattern [Operation]Result (e.g., AttendeeRegistrationResult, PaymentProcessingResult).
+
+### Testing Your Implementation
+The `AttendeeRegistrationResult` record is tested indirectly through the `AttendeeService` tests. Once you implement the `Attendee` aggregate in the next step, the `AttendeeRegistrationResult` will be used in the service layer, and you can run the tests to verify its functionality.
+
+
+
+
+### Step : Data Transfer Objects (DTOs)
 
 We also need to create a simple DTO (Data Transfer Object) to represent the attendee in the response. Data Transfer Objects are used to transfer data between layers, especially when the data structure is different from the domain model, which is why we are using it here.
 
@@ -414,21 +482,6 @@ public class Attendee {
 
 ```
 
-### Step 8: Creating Multiple Objects
-
-We need to create multiple objects when an attendee registers. First, we need an `Attendee`. Second, we need an `AttendeeRegisteredEvent`. We will use an `AttendeeRegistrationResult` to hold both the `Attendee` and `AttendeeRegisteredEvent`.
-
-Complete the `AttendeeRegistrationResult` by adding an `Attendee` and an `AttendeeRegisteredEvent`.
-
-```java
-package dddhexagonalworkshop.conference.attendees.domain.services;
-
-import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
-import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegisteredEvent;
-
-public record AttendeeRegistrationResult(Attendee attendee, AttendeeRegisteredEvent attendeeRegisteredEvent) {
-}
-```
 
 ### Step 5: Entities
 
