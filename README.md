@@ -557,78 +557,40 @@ public class Attendee {
 
 ### Testing Your Implementation
 After implementing the aggregate, verify it works correctly:
-java// Test successful registration
-AttendeeRegistrationResult result = Attendee.registerAttendee("john@example.com");
 
-// Verify attendee was created correctly
-Attendee attendee = result.attendee();
-assert attendee.getEmail().equals("john@example.com");
+```bash
+mvn test -Dtest=AggregateTest
+```
 
-// Verify event was created correctly
-AttendeeRegisteredEvent event = result.attendeeRegisteredEvent();
-assert event.email().equals("john@example.com");
+### Aggregate Patterns in Practice
 
-// Test business rule enforcement
-try {
-Attendee.registerAttendee(null); // Should fail
-assert false : "Should have thrown exception for null email";
-} catch (IllegalArgumentException e) {
-System.out.println("Correctly rejected null email: " + e.getMessage());
-}
+**Aggregate Size:** Keep aggregates small and focused. Our Attendee aggregate only handles attendee-specific concerns, not conference-wide logic.
 
-try {
-Attendee.registerAttendee("invalid-email"); // Should fail
-assert false : "Should have thrown exception for invalid email";
-} catch (IllegalArgumentException e) {
-System.out.println("Correctly rejected invalid email: " + e.getMessage());
-}
-
-// Test equality (business identity)
-Attendee attendee1 = Attendee.registerAttendee("test@example.com").attendee();
-Attendee attendee2 = Attendee.registerAttendee("test@example.com").attendee();
-assert attendee1.equals(attendee2) : "Attendees with same email should be equal";
-Connection to Other Components
-This aggregate will be:
-
-Called by the AttendeeService with data from the RegisterAttendeeCommand
-Return the AttendeeRegistrationResult containing both attendee and event
-Enforce all business rules for attendee registration
-Create domain events that other bounded contexts can react to
-
-Aggregate Patterns in Practice
-Aggregate Size: Keep aggregates small and focused. Our Attendee aggregate only handles attendee-specific concerns, not conference-wide logic.
-Consistency Boundaries:
-
+**Consistency Boundaries:**
 ✅ Within aggregate: Strong consistency (all changes happen together)
 ❌ Between aggregates: Eventual consistency (use events to synchronize)
 
-Loading Aggregates: In real systems, you'd load existing aggregates from repositories:
-java// Future patterns you might see
-public void updateContactInfo(String newEmail) {
-validateEmailForUpdate(newEmail);
-this.email = newEmail;
-// Raise EmailUpdatedEvent
-}
-Command Handling: Each business operation typically maps to one aggregate method:
+**Command Handling:** Each business operation typically maps to one aggregate method:
+- RegisterAttendeeCommand → Attendee.registerAttendee()
+- UpdateAttendeeCommand → Attendee.updateContactInfo()
+- CancelRegistrationCommand → Attendee.cancelRegistration()
 
-RegisterAttendeeCommand → Attendee.registerAttendee()
-UpdateAttendeeCommand → Attendee.updateContactInfo()
-CancelRegistrationCommand → Attendee.cancelRegistration()
+### Real-World Considerations
+**Performance:** Aggregates should be designed for the most common access patterns. Don't load huge object graphs if you only need basic information.
+**Concurrency:** In production, you'll need to handle concurrent modifications using techniques like optimistic locking or event sourcing.
+**Evolution:** As business rules change, aggregates evolve. The centralized logic makes changes easier to implement and test.
 
-Real-World Considerations
-Performance: Aggregates should be designed for the most common access patterns. Don't load huge object graphs if you only need basic information.
-Concurrency: In production, you'll need to handle concurrent modifications using techniques like optimistic locking or event sourcing.
-Evolution: As business rules change, aggregates evolve. The centralized logic makes changes easier to implement and test.
-Common Questions
-Q: Should aggregates have dependencies on other aggregates?
-A: No! Aggregates should not directly reference other aggregates. Use domain services or events for cross-aggregate operations.
-Q: How big should an aggregate be?
-A: As small as possible while maintaining consistency. If you find yourself loading lots of data you don't need, consider splitting the aggregate.
-Q: Can aggregates call external services?
-A: Generally no. Aggregates should contain pure business logic. Use domain services for operations that need external dependencies.
-Q: Should aggregates be mutable or immutable?
-A: It depends. For event-sourced systems, immutable aggregates work well. For traditional CRUD, controlled mutability (like our example) is common.
-Next Steps
+### Common Questions
+**Q:** Should aggregates have dependencies on other aggregates?
+**A:** No! Aggregates should not directly reference other aggregates. Use domain services or events for cross-aggregate operations.
+**Q:** How big should an aggregate be?
+**A:** As small as possible while maintaining consistency. If you find yourself loading lots of data you don't need, consider splitting the aggregate.
+**Q:** Can aggregates call external services?
+**A:** Generally no. Aggregates should contain pure business logic. Use domain services for operations that need external dependencies.
+**Q:** Should aggregates be mutable or immutable?
+**A:** It depends. For event-sourced systems, immutable aggregates work well. For traditional CRUD, controlled mutability (like our example) is common.
+
+### Next Steps
 In the next step, we'll create the AttendeeService that will orchestrate the registration workflow. The service will receive the RegisterAttendeeCommand, call our aggregate's registerAttendee() method, and handle the returned AttendeeRegistrationResult by persisting the attendee and publishing the event.
 
 
