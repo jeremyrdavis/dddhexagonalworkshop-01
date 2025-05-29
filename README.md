@@ -55,8 +55,8 @@ The project uses Quarkus, a Java framework that provides built-in support for RE
 
 In this first iteration, we will implement the basic workflow for registering an attendee. The steps are as follows:
 
-1. Create an `AttendeeRegisteredEvent`
-2. Create a `RegisterAttendeeCommand` with only one, basic property (email).
+1. Create an `AttendeeRegisteredEvent` that records the important functionality in this subdomain and can be used to integrate with the rest of the system.
+2. Create a `RegisterAttendeeCommand` that triggers the registration workflow.
 3. Implement an Adapter in the form of a REST Endpoint, `AttendeeEndpoint` with a POST method.
 4. Implement a Data Transfer Object, `AttendeeDTO`, to return the attendee's details to the UI.
 5. Implement a Domain Service, `AttendeeService`, to orchestration the registration process.
@@ -93,6 +93,7 @@ An AttendeeRegisteredEvent record that captures the fact that an attendee has su
 - Audit Trail: Events naturally create a history of what happened in your system, which is valuable for debugging, compliance, and business analytics.
 
 **Implementation**
+
 A Domain Event is a record of some business-significant occurrence in a Bounded Context. It's obviously significant that an attendee has registered because that's how conferences make money, but it's also significant because other parts of the system need to respond to the registration.
 For this iteration, we'll use a minimal event with only the attendee's email address. Update the AttendeeRegisteredEvent with the email:
 
@@ -103,10 +104,27 @@ public record AttendeeRegisteredEvent(String email) {
 }
 ```
 
+**Key Design Decisions**
 
+Why a record? Records are perfect for events because:
+- They're immutable by default (events should never change)
+- They provide automatic equals/hashCode implementation
+- They're concise and readable
 
-### Step 1: Commands
-## Step 1: Commands
+Why only email? In this iteration, we're keeping it simple. In real systems, you might include:
+- Timestamp of registration
+- Attendee ID
+- Conference ID
+- Registration type (early bird, regular, etc.)
+
+**Testing Your Implementation**
+
+After implementing the event, verify it compiles and the basic structure is correct:
+java// This should compile without errors
+AttendeeRegisteredEvent event = new AttendeeRegisteredEvent("test@example.com");
+System.out.println("Event created: " + event);
+
+## Step 2: Commands
 **Learning Objective**: Understand how commands encapsulate business intentions
 **What you'll build**: RegisterAttendeeCommand with email field
 **Why it matters**: Commands provide a clear contract for business operations
