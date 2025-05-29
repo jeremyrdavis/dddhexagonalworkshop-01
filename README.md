@@ -631,7 +631,10 @@ private Long id;  // Database concern, not business concern
         // Business logic mixed with persistence annotations
     }
 }
-java// ✅ Clean separation of concerns
+```
+✅ Clean separation of concerns
+
+```java
 // Domain Aggregate (business logic only)
 public class Attendee {
 private final String email;
@@ -640,8 +643,8 @@ private final String email;
         // Pure business logic, no persistence concerns
     }
 }
-```
-```java
+...
+
 // Persistence Entity (database concerns only)
 @Entity @Table(name = "attendees")
 public class AttendeeEntity {
