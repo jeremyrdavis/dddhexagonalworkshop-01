@@ -386,6 +386,303 @@ import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegistere
 ### Testing Your Implementation
 The `AttendeeRegistrationResult` record is tested indirectly through the `AttendeeService` tests. Once you implement the `Attendee` aggregate in the next step, the `AttendeeRegistrationResult` will be used in the service layer, and you can run the tests to verify its functionality.
 
+## Step 4: Aggregates
+
+### Learning Objectives
+
+- Understand Aggregates as the core building blocks of Domain-Driven Design
+- Implement the Attendee aggregate with business logic and invariant enforcement
+- Apply the concept of aggregate roots and consistency boundaries
+- Connect Commands, business logic, and Result objects through aggregate methods
+
+### What You'll Build
+
+An Attendee aggregate that encapsulates the business logic for attendee registration and maintains consistency within the attendee bounded context.
+
+### Why Aggregates Are the Heart of DDD
+- Aggregates solve the most critical problem in business software: where does the business logic live?
+Scattered Logic Problem: Without aggregates, business rules end up scattered across:
+```java
+ ❌ Business logic scattered everywhere
+// In the controller
+if (email.isEmpty()) throw new ValidationException("Email required");
+
+// In the service  
+if (existingAttendees.contains(email)) throw new DuplicateException("Already registered");
+
+// In the repository
+if (attendee.getStatus() == null) attendee.setStatus("PENDING");
+
+// In random utility classes
+if (!EmailValidator.isValid(email)) throw new InvalidEmailException();
+Aggregate Solution: All business logic for a concept lives in one place:
+java// ✅ All attendee business logic centralized in the Attendee aggregate
+public class Attendee {
+public static AttendeeRegistrationResult registerAttendee(String email) {
+// All validation, business rules, and invariants enforced here
+validateEmail(email);
+checkBusinessRules(email);
+
+        Attendee attendee = new Attendee(email);
+        AttendeeRegisteredEvent event = new AttendeeRegisteredEvent(email);
+        
+        return new AttendeeRegistrationResult(attendee, event);
+    }
+}
+```
+
+### Core Aggregate Concepts
+
+**Consistency Boundary:** An aggregate defines what data must be consistent together. For attendees:
+- Email must be valid and unique within the conference
+- Registration status must be coherent with payment status
+- Badge information must match attendee details
+**Aggregate Root:** The single entry point for accessing the aggregate. Other objects can only reference the aggregate through its root (the Attendee itself), never reaching into internal objects directly.
+**Business Invariants:** Rules that must always be true:
+- An attendee must have a valid email
+- An attendee can only be registered once per conference
+- Registration must create both attendee record and notification event
+
+### Implementation
+
+Aggregates are the core objects in Domain-Driven Design. An Aggregate represents the most important object or objects in our Bounded Context. We're implementing the Attendees Bounded Context, and the Attendee is the most important object in this context.
+An Aggregate both represents the real-world object (a conference attendee in this case) and encapsulates all of the invariants, or business logic, associated with the object.
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain.aggregates;
+
+import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegisteredEvent;
+import dddhexagonalworkshop.conference.attendees.domain.services.AttendeeRegistrationResult;
+
+/**
+ * "An AGGREGATE is a cluster of associated objects that we treat as a unit for the purpose of data changes. Each AGGREGATE has a root and a boundary. The boundary defines what is inside the AGGREGATE. The root is a single, specific ENTITY contained in the AGGREGATE. The root is the only member of the AGGREGATE that outside objects are allowed to hold references to, although objects within the boundary may hold references to each other."
+ * Eric Evans, Domain-Driven Design: Tackling Complexity in the Heart of Software, 2003
+ *
+ * Attendee aggregate root - represents a conference attendee and encapsulates
+ * all business logic related to attendee management. This is the consistency
+ * boundary for attendee-related operations.
+ */
+public class Attendee {
+
+    private final String email;
+
+    /**
+     * Private constructor - aggregates control their own creation
+     * to ensure invariants are always maintained.
+     */
+    private Attendee(String email) {
+        this.email = email;
+    }
+
+    /**
+     * Factory method for registering a new attendee.
+     * This is the primary business operation that processes the registration
+     * command and returns everything needed by the application layer.
+     *
+     * @param email The attendee's email address
+     * @return AttendeeRegistrationResult containing the attendee and event
+     */
+    public static AttendeeRegistrationResult registerAttendee(String email) {
+        // Business logic and invariant enforcement
+        validateEmailForRegistration(email);
+
+        // Create the aggregate instance
+        Attendee attendee = new Attendee(email);
+
+        // Create the domain event
+        AttendeeRegisteredEvent event = new AttendeeRegisteredEvent(email);
+
+        // Return both outputs packaged together
+        return new AttendeeRegistrationResult(attendee, event);
+    }
+
+    /**
+     * Encapsulates business rules for email validation.
+     * This is where domain-specific validation logic lives.
+     */
+    private static void validateEmailForRegistration(String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email is required for registration");
+        }
+
+        if (!email.contains("@") || !email.contains(".")) {
+            throw new IllegalArgumentException("Email must be a valid email address");
+        }
+
+        // Additional business rules could go here:
+        // - Check against blocked domains
+        // - Validate email format against conference requirements
+        // - Check for corporate email requirements
+    }
+
+    /**
+     * Getter for email - aggregates control access to their data
+     */
+    public String getEmail() {
+        return email;
+    }
+
+    /**
+     * Equality based on business identity (email in this case)
+     * Two attendees are the same if they have the same email
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Attendee attendee = (Attendee) o;
+        return email.equals(attendee.email);
+    }
+
+    @Override
+    public int hashCode() {
+        return email.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "Attendee{email='" + email + "'}";
+    }
+}
+```
+
+###  Key Design Decisions
+
+**Static Factory Method:** registerAttendee() is static because it represents creating a new attendee, not operating on an existing one. This is a common pattern for aggregate creation.
+**Private Constructor:** The constructor is private to force all creation through the factory method, ensuring business rules are always applied.
+**Business Logic Location:** All validation and business rules are in the aggregate, not scattered across services or controllers.
+
+### Testing Your Implementation
+After implementing the aggregate, verify it works correctly:
+java// Test successful registration
+AttendeeRegistrationResult result = Attendee.registerAttendee("john@example.com");
+
+// Verify attendee was created correctly
+Attendee attendee = result.attendee();
+assert attendee.getEmail().equals("john@example.com");
+
+// Verify event was created correctly
+AttendeeRegisteredEvent event = result.attendeeRegisteredEvent();
+assert event.email().equals("john@example.com");
+
+// Test business rule enforcement
+try {
+Attendee.registerAttendee(null); // Should fail
+assert false : "Should have thrown exception for null email";
+} catch (IllegalArgumentException e) {
+System.out.println("Correctly rejected null email: " + e.getMessage());
+}
+
+try {
+Attendee.registerAttendee("invalid-email"); // Should fail
+assert false : "Should have thrown exception for invalid email";
+} catch (IllegalArgumentException e) {
+System.out.println("Correctly rejected invalid email: " + e.getMessage());
+}
+
+// Test equality (business identity)
+Attendee attendee1 = Attendee.registerAttendee("test@example.com").attendee();
+Attendee attendee2 = Attendee.registerAttendee("test@example.com").attendee();
+assert attendee1.equals(attendee2) : "Attendees with same email should be equal";
+Connection to Other Components
+This aggregate will be:
+
+Called by the AttendeeService with data from the RegisterAttendeeCommand
+Return the AttendeeRegistrationResult containing both attendee and event
+Enforce all business rules for attendee registration
+Create domain events that other bounded contexts can react to
+
+Aggregate Patterns in Practice
+Aggregate Size: Keep aggregates small and focused. Our Attendee aggregate only handles attendee-specific concerns, not conference-wide logic.
+Consistency Boundaries:
+
+✅ Within aggregate: Strong consistency (all changes happen together)
+❌ Between aggregates: Eventual consistency (use events to synchronize)
+
+Loading Aggregates: In real systems, you'd load existing aggregates from repositories:
+java// Future patterns you might see
+public void updateContactInfo(String newEmail) {
+validateEmailForUpdate(newEmail);
+this.email = newEmail;
+// Raise EmailUpdatedEvent
+}
+Command Handling: Each business operation typically maps to one aggregate method:
+
+RegisterAttendeeCommand → Attendee.registerAttendee()
+UpdateAttendeeCommand → Attendee.updateContactInfo()
+CancelRegistrationCommand → Attendee.cancelRegistration()
+
+Real-World Considerations
+Performance: Aggregates should be designed for the most common access patterns. Don't load huge object graphs if you only need basic information.
+Concurrency: In production, you'll need to handle concurrent modifications using techniques like optimistic locking or event sourcing.
+Evolution: As business rules change, aggregates evolve. The centralized logic makes changes easier to implement and test.
+Common Questions
+Q: Should aggregates have dependencies on other aggregates?
+A: No! Aggregates should not directly reference other aggregates. Use domain services or events for cross-aggregate operations.
+Q: How big should an aggregate be?
+A: As small as possible while maintaining consistency. If you find yourself loading lots of data you don't need, consider splitting the aggregate.
+Q: Can aggregates call external services?
+A: Generally no. Aggregates should contain pure business logic. Use domain services for operations that need external dependencies.
+Q: Should aggregates be mutable or immutable?
+A: It depends. For event-sourced systems, immutable aggregates work well. For traditional CRUD, controlled mutability (like our example) is common.
+Next Steps
+In the next step, we'll create the AttendeeService that will orchestrate the registration workflow. The service will receive the RegisterAttendeeCommand, call our aggregate's registerAttendee() method, and handle the returned AttendeeRegistrationResult by persisting the attendee and publishing the event.
+
+
+
+
+
+## Step 4: Aggregates
+
+#### Why Aggregates?
+
+Without aggregates, business logic gets scattered across services and entities.
+Aggregates ensure that all business rules for a concept (like Attendee registration)
+are centralized and consistently enforced.
+
+Aggregates are the core objects in Domain Driven Design. An Aggregate represents the most important object or objects in our bounded context.
+We are implementing the Attendees Bounded Context, and the Attendee is the most important object in this Bounded Context.
+
+An Aggregate both represents the real world object, a conference attendee in this case, and encapsulates all of the invariants, or business logic, associated with the object. In this iteration, we will implement business logic to notify the rest of the system about an attendee's registration.
+
+Update the Attendee Aggregate in attendees/domain/aggregates so that the `registerAttendee` method creates and returns an instance of `Attendee` and an `AttendeeRegisteredEvent` that will be used to notify the rest of the system. We will also need to create an object to hold both the `Attendee` and `AttendeeRegisteredEvent`, `AttendeeRegistrationResult`. Do not worry if your class does not compile immediately. We will create the other objects in the next step.
+
+Implement the `registerAttendee` method by creating an AttendeeEntity and an AttendeeRegisteredEvent. Instantiate an `AttendeeRegistrationResult` with the newly created objects and return the `AttendeeRegistrationResult`.
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain;
+
+public class Attendee {
+
+  String email;
+
+  public static AttendeeRegistrationResult registerAttendee(String email, String firstName, String lastName, Address address) {
+      // Here you would typically perform some business logic, like checking if the attendee already exists
+      // and then create an event to publish.
+      Attendee attendee = new Attendee(email, firstName, lastName, address);
+      AttendeeRegisteredEvent event = new AttendeeRegisteredEvent(email, attendee.getFullName());
+      return new AttendeeRegistrationResult(attendee, event);
+  }
+
+  public String getEmail(){
+    return email;
+  }
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -442,46 +739,6 @@ public class AttendeeService {
 }
 
 ```
-
-### Step 5: Aggregates
-
-#### Why Aggregates?
-
-Without aggregates, business logic gets scattered across services and entities.
-Aggregates ensure that all business rules for a concept (like Attendee registration)
-are centralized and consistently enforced.
-
-Aggregates are the core objects in Domain Driven Design. An Aggregate represents the most important object or objects in our bounded context.
-We are implementing the Attendees Bounded Context, and the Attendee is the most important object in this Bounded Context.
-
-An Aggregate both represents the real world object, a conference attendee in this case, and encapsulates all of the invariants, or business logic, associated with the object. In this iteration, we will implement business logic to notify the rest of the system about an attendee's registration.
-
-Update the Attendee Aggregate in attendees/domain/aggregates so that the `registerAttendee` method creates and returns an instance of `Attendee` and an `AttendeeRegisteredEvent` that will be used to notify the rest of the system. We will also need to create an object to hold both the `Attendee` and `AttendeeRegisteredEvent`, `AttendeeRegistrationResult`. Do not worry if your class does not compile immediately. We will create the other objects in the next step.
-
-Implement the `registerAttendee` method by creating an AttendeeEntity and an AttendeeRegisteredEvent. Instantiate an `AttendeeRegistrationResult` with the newly created objects and return the `AttendeeRegistrationResult`.
-
-```java
-package dddhexagonalworkshop.conference.attendees.domain;
-
-public class Attendee {
-
-  String email;
-
-  public static AttendeeRegistrationResult registerAttendee(String email, String firstName, String lastName, Address address) {
-      // Here you would typically perform some business logic, like checking if the attendee already exists
-      // and then create an event to publish.
-      Attendee attendee = new Attendee(email, firstName, lastName, address);
-      AttendeeRegisteredEvent event = new AttendeeRegisteredEvent(email, attendee.getFullName());
-      return new AttendeeRegistrationResult(attendee, event);
-  }
-
-  public String getEmail(){
-    return email;
-  }
-}
-
-```
-
 
 ### Step 5: Entities
 
