@@ -569,6 +569,7 @@ mvn test -Dtest=AggregateTest
 **Consistency Boundaries:**
 
 ✅ Within aggregate: Strong consistency (all changes happen together)
+
 ❌ Between aggregates: Eventual consistency (use events to synchronize)
 
 **Command Handling:** Each business operation typically maps to one aggregate method:
