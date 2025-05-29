@@ -77,11 +77,11 @@ Let's get coding!
 - Understand the role of Domain Events in capturing business-significant occurrences
 - Implement an AttendeeRegisteredEvent to notify other parts of the system
 
-**What You'll Build**
+### What You'll Build
 
 An AttendeeRegisteredEvent record that captures the fact that an attendee has successfully registered for the conference.
 
-**Why Domain Events Matter**
+### Why Domain Events Matter
 
 - Domain Events solve several critical problems in distributed systems:
 - Business Communication: Events represent facts that have already happened in the business domain. Events are immutable statements of truth.
@@ -93,7 +93,7 @@ An AttendeeRegisteredEvent record that captures the fact that an attendee has su
   Without events, the AttendeeService would need to know about all these concerns, creating tight coupling. With events, each system can independently listen for AttendeeRegisteredEvent and react appropriately.
 - Audit Trail: Events naturally create a history of what happened in your system, which is valuable for debugging, compliance, and business analytics.
 
-**Implementation**
+### Implementation
 
 A Domain Event is a record of some business-significant occurrence in a Bounded Context. It's obviously significant that an attendee has registered because that's how conferences make money, but it's also significant because other parts of the system need to respond to the registration.
 For this iteration, we'll use a minimal event with only the attendee's email address. Update  `AttendeeRegisteredEvent.java` with the email:
@@ -107,20 +107,20 @@ public record AttendeeRegisteredEvent(String email) {
 
 ***Note:*** Deleting and recreating the file is fine if you prefer to start fresh. Just ensure the package structure matches the one in the project.
 
-**Key Design Decisions**
+### Key Design Decisions
 
-Why a record? Records are perfect for events because:
+**Why a record?** Records are perfect for events because:
 - They're immutable by default (events should never change)
 - They provide automatic equals/hashCode implementation
 - They're concise and readable
 
-Why only email? In this iteration, we're keeping it simple. In real systems, you might include:
+**Why only email?** In this iteration, we're keeping it simple. In real systems, you might include:
 - Timestamp of registration
 - Attendee ID
 - Conference ID
 - Registration type (early bird, regular, etc.)
 
-**Testing Your Implementation**
+### Testing Your Implementation
 
 After implementing the event, verify it compiles and the basic structure is correct.  There is a JUnit test, `AttendeeRegisteredEventTest.java` which can be run in your IDE or from the commd line with:
 
@@ -131,26 +131,151 @@ mvn test -Dtest=AttendeeRegisteredEventTest
 The test should pass, confirming that the `AttendeeRegisteredEvent` record is correctly defined and can be instantiated with an email address.
 
 ## Step 2: Commands
-**Learning Objective**: Understand how commands encapsulate business intentions
-**What you'll build**: RegisterAttendeeCommand with email field
-**Why it matters**: Commands provide a clear contract for business operations
-Commands are objects that encapsulate a request to perform an action. Commands are immutable and can fail or be rejected. Commands are closely related to Events, which we will cover later. The difference between the two is that Commands represent an intention to change the state of the system, while Events are statements of fact that have already happened.
 
-We will start by creating a command to register an attendee. This command will encapsulate the data needed to register an attendee, which in this iteration is just the email address.
+### Learning Objectives
+- Understand how Commands encapsulate business intentions and requests for action
+- Distinguish between Commands (can fail) and Events (facts that occurred)
+- Implement a RegisterAttendeeCommand to capture attendee registration requests
+- Apply the Command pattern to create a clear contract for business operations
 
-The `RegisterAttendeeCommand` can be found in the `dddhexagonalworkshop.conference.attendees.domain.services` package because it is part of AttendeeService's API. We will implement the `AttendeeService` later; for now, we will just create the command.
+### You'll Build
 
-Update the RegisterAttendeeCommand object with a single String, "email."
+A `RegisterAttendeeCommand` record that encapsulates all the data needed to request attendee registration for the conference.
+
+### Why Commands Matter
+
+Commands solve several important problems in business applications:
+- Clear Business Intent: Commands explicitly represent what a user or system wants to accomplish. `RegisterAttendeeCommand` clearly states "I want to register this person for the conference" rather than having loose parameters floating around.
+- Validation Boundary: Commands provide a natural place to validate input before it reaches your business logic:
+
+```java
+// Instead of scattered validation
+if (email == null || email.isEmpty()) { ... }
+if (!email.contains("@")) { ... }
+
+// Commands centralize validation rules
+public record RegisterAttendeeCommand(String email) {
+    public RegisterAttendeeCommand {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        // Additional validation logic here
+    }
+}
+```
+
+- Immutability: Commands are immutable objects that can't be accidentally modified as they pass through your system. This prevents bugs and makes the code easier to reason about.
+- Failure Handling: Unlike events (which represent facts), commands can be rejected. Your business logic can validate a command and decide whether to process it or reject it with a clear error message.
+
+### Commands vs Events: A Critical Distinction
+
+| Aspect | Commands | Events |
+|--------|----------|--------|
+| **Nature** | Intention/Request | Fact/What happened |
+| **Can fail?** | Yes | No (already happened) |
+| **Mutability** | Immutable | Immutable |
+| **Tense** | Imperative ("Register") | Past tense ("Registered") |
+| **Example** | RegisterAttendeeCommand | AttendeeRegisteredEvent |
+
+Think of it like ordering food:
+- **Command**: "I want to order a burger" (restaurant might be out of burgers)
+- **Event**: "Customer ordered a burger at 2:15 PM" (this definitely happened)
+
+### Implementation
+
+Commands are objects that encapsulate a request to perform an action. The `RegisterAttendeeCommand` will encapsulate the data needed to register an attendee, which in this iteration is just the email address.
+
+The `RegisterAttendeeCommand` is located in the `dddhexagonalworkshop.conference.attendees.domain.services` package because it's part of the AttendeeService's API. This placement follows DDD principles where commands are associated with the services that process them.
 
 ```java
 package dddhexagonalworkshop.conference.attendees.domain.services;
 
+/**
+ * Command representing a request to register an attendee for the conference.
+ * Commands encapsulate the intent to perform a business operation and can
+ * be validated, queued, or rejected before processing.
+ */
 public record RegisterAttendeeCommand(String email) {
+    
+    /**
+     * Compact constructor for validation.
+     * This runs automatically when the record is created.
+     */
+    public RegisterAttendeeCommand {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email cannot be null or blank");
+        }
+        
+        // Basic email format validation
+        if (!email.contains("@")) {
+            throw new IllegalArgumentException("Email must contain @ symbol");
+        }
+    }
 }
-
 ```
 
-### Step 2: Adapters
+### Key Design Decisions
+
+**Why a record?** Records are perfect for commands because:
+- They're immutable by default (commands shouldn't change after creation)
+- They provide automatic equals/hashCode (useful for deduplication)
+- They're concise and focus on data rather than behavior
+- The compact constructor enables validation at creation time
+
+**Why only email?** We're starting simple to focus on the DDD concepts. In real systems, registration might include:
+- First and last name
+- Phone number
+- Company information
+- Dietary restrictions
+- T-shirt size
+
+**Package placement?** Commands live with the service that processes them, not in a separate "commands" package. This keeps related concepts together.
+
+### Testing Your Implementation
+
+After implementing the event, verify it compiles and the basic structure is correct.  There is a JUnit test, `RegisterAttendeeCommandTest.java` which can be run in your IDE or from the commd line with:
+
+```bash
+mvn test -Dtest=RegisterAttendeeCommandTest
+```
+
+## Connection to Other Components
+
+This command will be:
+1. **Received** by the `AttendeeEndpoint` from HTTP requests
+2. **Processed** by the `AttendeeService` to orchestrate registration
+3. **Validated** automatically when created (thanks to the compact constructor)
+4. **Used** to create the `Attendee` aggregate and trigger business logic
+
+We have not yet implemented the `Attendee`, `AttendeeService`, or `AttendeeEndpoint` yet, but we will in the next steps.
+
+## Real-World Considerations
+
+**Command Validation**: In production systems, you might want more sophisticated validation:
+- Email format validation using regex
+- Cross-field validation for complex commands
+
+**Command Handling**: Commands often go through pipelines:
+```
+HTTP Request → Command → Validation → Authorization → Business Logic → Events
+```
+
+**Command Sourcing**: Some systems store commands as well as events, creating a complete audit trail of what was requested vs. what actually happened.
+
+## Common Questions
+
+**Q: Should commands contain behavior or just data?**
+A: Primarily data, but validation logic in the constructor is acceptable. Complex business logic belongs in aggregates or domain services.
+
+**Q: Can one command trigger multiple events?**
+A: Absolutely! Registering an attendee might trigger `AttendeeRegisteredEvent`, `PaymentRequestedEvent`, and `WelcomeEmailQueuedEvent`.
+
+**Q: What if I need to change a command after it's created?**
+A: You don't! Commands are immutable. Instead, create a new command with the updated data. This immutability prevents bugs and makes the system more predictable.
+
+### Next Steps
+
+In the next step, we'll create the `AttendeeRegistrationResult` that will package together the outputs of processing this command - both the created `Attendee` and the `AttendeeRegisteredEvent` that needs to be published.### Step 2: Adapters
 
 The `Ports and Adapters` pattern, also known as `Hexagonal Architecture`, is a design pattern that separates the core business logic from external systems. The phrase was coined by Alistair Cockburn in the early 2000s.
 
