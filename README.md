@@ -725,8 +725,16 @@ import jakarta.persistence.*;
     * Protected to keep access controlled within persistence layer.
       */
       protected String getEmail() {
-      return email;
+          return email;
       }
+
+    /**
+     * Setter for email.
+     * Protected to keep access controlled within persistence layer.
+     */
+    protected void setEmail(String email) {
+        this.email = email;
+    }
 
   /**
     * String representation for debugging.
@@ -762,44 +770,24 @@ The unique constraint on email ensures data integrity at the database level, com
 
 ### Testing Your Implementation 
 
-After implementing the entity, verify it works correctly:
+We will test the `AttendeeEntity` in the `AttendeeRepositoryTest.java` class, which will build in the next step.
 
-```bash
-mvn test -Dtest=AttendeeEntityTest
-```
+### Connection to Other Components
 
-// Test different emails are not equal
-AttendeeEntity entity3 = new AttendeeEntity("different@example.com");
-assert !entity1.equals(entity3) : "Entities with different emails should not be equal";
-
-// Test toString for debugging
-System.out.println("Entity: " + entity1);
-For database integration testing (you'll do this later with the repository):
-java@Test
-@Transactional
-void testEntityPersistence() {
-AttendeeEntity entity = new AttendeeEntity("persist@example.com");
-
-    entityManager.persist(entity);
-    entityManager.flush();
-    
-    assert entity.getId() != null : "ID should be generated after persistence";
-    
-    AttendeeEntity loaded = entityManager.find(AttendeeEntity.class, entity.getId());
-    assert loaded.getEmail().equals("persist@example.com");
-}
-Connection to Other Components
 This entity will be:
 
-Created by the AttendeeRepository when converting from domain aggregates
-Persisted to the database using JPA/Hibernate
-Loaded from the database when retrieving attendees
-Converted back to domain aggregates by the repository
+- Created by the AttendeeRepository when converting from domain aggregates
+- Persisted to the database using JPA/Hibernate
+- Loaded from the database when retrieving attendees
+- Converted back to domain aggregates by the repository
 
 Mapping Patterns
-Simple Mapping: Our current approach with basic fields and annotations.
+
+- Simple Mapping: Our current approach with basic fields and annotations.
 Complex Relationships: Real applications might have:
-java@Entity
+
+```java
+@Entity
 public class AttendeeEntity {
 @OneToMany(mappedBy = "attendee", cascade = CascadeType.ALL)
 private List<RegistrationEntity> registrations;
@@ -810,14 +798,21 @@ private List<RegistrationEntity> registrations;
     @Enumerated(EnumType.STRING)
     private AttendeeStatus status;
 }
+```
+
 Value Objects: Embedded objects for complex data:
-java@Embeddable
+
+```java
+@Embeddable
 public class AddressEntity {
 private String street;
 private String city;
 private String zipCode;
 }
-Real-World Considerations
+```
+
+### Real-World Considerations
+
 Performance: Use appropriate fetch strategies and indexing:
 java@Index(name = "idx_attendee_email", columnList = "email")
 @Table(name = "attendee", indexes = {@Index(name = "idx_attendee_email", columnList = "email")})
@@ -833,19 +828,27 @@ private Long version;
 Soft Deletes: Instead of physical deletion:
 java@Column(name = "deleted_at")
 private LocalDateTime deletedAt;
-Common Questions
-Q: Why not just use the domain aggregate as a JPA entity?
-A: It violates single responsibility principle and couples domain logic to persistence technology. Changes in business rules would require database considerations and vice versa.
-Q: Should entities contain validation logic?
-A: No, validation belongs in the domain aggregate. Entities are just data containers for persistence.
-Q: Can entities reference other entities?
-A: Yes, but keep relationships simple and consider the performance implications of joins and lazy loading.
-Q: How do I handle complex domain objects with many fields?
-A: Start simple and evolve. Use embedded objects (@Embeddable) for value objects and separate entities for other aggregates.
-Q: Should I use the same entity for reading and writing?
-A: For simple cases, yes. For complex scenarios, consider separate read/write models (CQRS pattern).
-Next Steps
+
+### Common Questions
+
+**Q:** Why not just use the domain aggregate as a JPA entity?
+**A:** It violates single responsibility principle and couples domain logic to persistence technology. Changes in business rules would require database considerations and vice versa.
+
+**Q:** Should entities contain validation logic?
+**A:** No, validation belongs in the domain aggregate. Entities are just data containers for persistence.
+
+**Q:** Can entities reference other entities?
+**A:** Yes, but keep relationships simple and consider the performance implications of joins and lazy loading.
+
+**Q:** How do I handle complex domain objects with many fields?
+**A:** Start simple and evolve. Use embedded objects (@Embeddable) for value objects and separate entities for other aggregates.
+
+**Q:** Should I use the same entity for reading and writing?
+**A:** For simple cases, yes. For complex scenarios, consider separate read/write models (CQRS pattern).
+
+### Next Steps
 In the next step, we'll create the AttendeeRepository that bridges between our domain aggregates and these persistence entities. The repository will handle converting Attendee aggregates to AttendeeEntity objects for storage, and vice versa for retrieval, maintaining the clean separation between domain and persistence concerns.
+
 ### Step 6: Repositories
 
 Complete the AttendeeRepository by adding a method to persist attendees.
