@@ -1,8 +1,6 @@
-# Workshop Workflow
+# Iteration 01: End to end DDD
 
-## Iteration 01: End to end DDD
-
-### DDD Concepts: Commands, Events, Aggregates, Domain Services, Repositories, Entities
+## DDD Concepts: Commands, Events, Aggregates, Domain Services, Repositories, Entities
 
 ### Overview
 
@@ -57,22 +55,61 @@ The project uses Quarkus, a Java framework that provides built-in support for RE
 
 In this first iteration, we will implement the basic workflow for registering an attendee. The steps are as follows:
 
-1. Create a `RegisterAttendeeCommand` with only one, basic property (email).
-2. Implement an Adapter in the form of a REST Endpoint, `AttendeeEndpoint` with a POST method.
-3. Implement a Data Transfer Object, `AttendeeDTO`, to return the attendee's details to the UI.
-4. Implement a Domain Service, `AttendeeService`, to orchestration the registration process.
-5. Implement an `Attendee` Aggregate to isolate invariants (business logic) from the rest of the application.
-6. Implement a Domain Event, `AttendeeRegisteredEvent`, that will be published when an attendee is successfully registered.
-7. Implement a Repository interface, `AttendeeRepository`, that defines methods for saving and retrieving attendees.
-8. Create an Entity, `AttendeeEntity`, to persist instances of the `Attendee` entity in a database.
-9. Create an Adapter, `AttendeeEventPublisher`, that sends events to Kafka to propagate changes to the rest of the system.
+1. Create an `AttendeeRegisteredEvent`
+2. Create a `RegisterAttendeeCommand` with only one, basic property (email).
+3. Implement an Adapter in the form of a REST Endpoint, `AttendeeEndpoint` with a POST method.
+4. Implement a Data Transfer Object, `AttendeeDTO`, to return the attendee's details to the UI.
+5. Implement a Domain Service, `AttendeeService`, to orchestration the registration process.
+6. Implement an `Attendee` Aggregate to isolate invariants (business logic) from the rest of the application.
+7. Implement a Domain Event, `AttendeeRegisteredEvent`, that will be published when an attendee is successfully registered.
+8. Implement a Repository interface, `AttendeeRepository`, that defines methods for saving and retrieving attendees.
+9. Create an Entity, `AttendeeEntity`, to persist instances of the `Attendee` entity in a database.
+10. Create an Adapter, `AttendeeEventPublisher`, that sends events to Kafka to propagate changes to the rest of the system.
 
 By the end of Iteration 1, you'll have a solid foundation in DDD concepts and a very basic working application.
 
 Let's get coding!
 
-### Step 1: Commands
+## Step 1: Events
 
+### Learning Objectives
+
+- Understand the role of Domain Events in capturing business-significant occurrences
+- Implement an AttendeeRegisteredEvent to notify other parts of the system
+
+**What You'll Build**
+
+An AttendeeRegisteredEvent record that captures the fact that an attendee has successfully registered for the conference.
+
+**Why Domain Events Matter**
+- Domain Events solve several critical problems in distributed systems:
+- Business Communication: Events represent facts that have already happened in the business domain. Events are immutable statements of truth.
+- System Decoupling: When an attendee registers, multiple things might need to happen:
+ -- Send a welcome email
+ -- Update conference capacity
+ -- Notify the billing system
+ -- Generate a badge
+  Without events, the AttendeeService would need to know about all these concerns, creating tight coupling. With events, each system can independently listen for AttendeeRegisteredEvent and react appropriately.
+- Audit Trail: Events naturally create a history of what happened in your system, which is valuable for debugging, compliance, and business analytics.
+
+**Implementation**
+A Domain Event is a record of some business-significant occurrence in a Bounded Context. It's obviously significant that an attendee has registered because that's how conferences make money, but it's also significant because other parts of the system need to respond to the registration.
+For this iteration, we'll use a minimal event with only the attendee's email address. Update the AttendeeRegisteredEvent with the email:
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain.events;
+
+public record AttendeeRegisteredEvent(String email) {
+}
+```
+
+
+
+### Step 1: Commands
+## Step 1: Commands
+**Learning Objective**: Understand how commands encapsulate business intentions
+**What you'll build**: RegisterAttendeeCommand with email field
+**Why it matters**: Commands provide a clear contract for business operations
 Commands are objects that encapsulate a request to perform an action. Commands are immutable and can fail or be rejected. Commands are closely related to Events, which we will cover later. The difference between the two is that Commands represent an intention to change the state of the system, while Events are statements of fact that have already happened.
 
 We will start by creating a command to register an attendee. This command will encapsulate the data needed to register an attendee, which in this iteration is just the email address.
@@ -226,19 +263,6 @@ public class Attendee {
   }
 }
 
-```
-
-### Step 7: Events
-
-A Domain Event is a record of some business-significant occurrence in a Bounded Context. It is obviously significant that an attendee has registered because that one way conferences make money, but it is also significant because other parts of the system need to respond to the registration.
-
-For this iteration, we will use a minimal event with only the attendee's email address. Update the AttendeeRegistrationEvent with the email:
-
-```java
-package dddhexagonalworkshop.conference.attendees.domain.events;
-
-public record AttendeeRegisteredEvent(String email) {
-}
 ```
 
 ### Step 8: Creating Multiple Objects
