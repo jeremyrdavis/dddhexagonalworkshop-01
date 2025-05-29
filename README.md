@@ -662,7 +662,69 @@ private Long id;
 - Evolution Independence: Database schema changes don't require changes to domain logic, and business rule changes don't require database migrations.
 
 ### Entities vs Aggregates: Key Differences
-- AspectDomain AggregatePersistence EntityPurposeBusiness logic & rulesData storage mappingDependenciesPure Java, domain conceptsJPA, database annotationsIdentityBusiness identity (email)Technical identity (database ID)LifecycleCreated by business operationsCreated/loaded by ORMMutabilityControlled by business rulesManaged by persistence frameworkTestingUnit tests, no databaseIntegration tests with database
+
+Understanding the distinction between Domain Aggregates and Persistence Entities is crucial for proper DDD implementation. Here's a detailed comparison:
+
+| Aspect      | Domain Aggregate             | Persistence Entity           |
+| ----------- | ---------------------------- | ---------------------------- |
+| Purpose     | Business logic & rules       | Data storage mapping         |
+| Dependencies| Pure Java, domain concepts   | JPA, database annotations    |
+| Identity    | Business identity (email)    | Technical identity (database ID) |
+| Lifecycle   | Created by business operations | Created/loaded by ORM        |
+| Mutability  | Controlled by business rules | Managed by persistence framework |
+| Testing     | Unit tests, no database      | Integration tests with database |
+
+### Deep Dive: Purpose and Responsibility
+
+Domain Aggregates are responsible for:
+
+- Enforcing business invariants and rules
+- Encapsulating domain logic and behavior
+- Maintaining consistency within their boundary
+- Creating domain events when state changes occur
+- Providing a clean API for business operations
+
+```java
+// Domain Aggregate - focused on business behavior
+public class Attendee {
+    public static AttendeeRegistrationResult registerAttendee(String email) {
+        validateBusinessRules(email);        // Business logic
+        checkConferenceCapacity();           // Business invariant
+        Attendee attendee = new Attendee(email);
+        AttendeeRegisteredEvent event = new AttendeeRegisteredEvent(email);
+        return new AttendeeRegistrationResult(attendee, event);
+    }
+}
+```
+
+Persistence Entities are responsible for:
+
+- Mapping domain data to database structures
+- Handling ORM framework requirements
+- Managing database relationships and constraints
+- Providing efficient data access patterns
+- Supporting query optimization
+
+```java
+// Persistence Entity - focused on data mapping
+@Entity @Table(name = "attendee")
+public class AttendeeEntity {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(name = "email", unique = true, nullable = false)
+    private String email;
+    
+    // No business logic - just data mapping
+}
+```
+### Why This Separation Matters
+
+**Flexibility:** Business logic can evolve independently of persistence technology. You could switch from JPA to MongoDB without changing domain code.
+**Testability:** Business logic can be tested quickly without database setup, while persistence logic gets thorough integration testing.
+**Performance:** Persistence entities can be optimized for database access patterns without compromising domain model clarity.
+**Team Organization:** Domain experts can focus on aggregates, while database specialists optimize entities.
+**Technology Evolution:** Framework updates or database changes don't ripple into business logic.
 
 ### Implementation
 
