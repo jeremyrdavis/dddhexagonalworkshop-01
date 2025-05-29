@@ -567,6 +567,7 @@ mvn test -Dtest=AggregateTest
 **Aggregate Size:** Keep aggregates small and focused. Our Attendee aggregate only handles attendee-specific concerns, not conference-wide logic.
 
 **Consistency Boundaries:**
+
 ✅ Within aggregate: Strong consistency (all changes happen together)
 ❌ Between aggregates: Eventual consistency (use events to synchronize)
 
