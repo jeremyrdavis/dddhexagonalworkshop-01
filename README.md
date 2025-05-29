@@ -437,7 +437,9 @@ checkBusinessRules(email);
 - Email must be valid and unique within the conference
 - Registration status must be coherent with payment status
 - Badge information must match attendee details
+- 
 **Aggregate Root:** The single entry point for accessing the aggregate. Other objects can only reference the aggregate through its root (the Attendee itself), never reaching into internal objects directly.
+
 **Business Invariants:** Rules that must always be true:
 - An attendee must have a valid email
 - An attendee can only be registered once per conference
