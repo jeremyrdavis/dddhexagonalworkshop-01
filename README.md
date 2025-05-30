@@ -817,9 +817,13 @@ import jakarta.persistence.*;
 ```
 
 ### Key Design Decisions
+
 **Protected Constructors:** The default constructor is required by JPA, while the parameterized constructor allows controlled creation. Both are protected to limit access.
+
 **Protected Methods:** Getters and setters are protected, not public. Only the repository layer should interact with entities directly.
+
 **No Business Logic:** The entity contains no validation or business rules - that's the aggregate's responsibility.
+
 **Simple Mapping:** We start with basic column mapping. Real applications might have more complex relationships and constraints.
 
 ### Database Schema
@@ -1195,11 +1199,16 @@ import java.util.Optional;
 **Aggregate-to-Entity Conversion:** The fromAggregate() and toAggregate() methods handle all conversion logic, keeping domain and persistence models separate.
 
 **Domain Interface:** Methods are named using business terminology (findByEmail, persist) rather than database terminology (selectByEmail, insert).
+
 **Error Handling:** Repository methods throw domain exceptions, not database exceptions, maintaining the abstraction.
+
 **Panache Integration:** We extend PanacheRepository<AttendeeEntity> to get basic CRUD operations while adding our domain-specific methods.
+
 **Conversion Responsibility:** The repository is responsible for all conversion between domain and persistence models.
 
+### Next Steps
 
+In the next section we will create a second Outbound Adaper, `AttendeeEventPublisher` to send messages to the rest of the system.
 
 
 
