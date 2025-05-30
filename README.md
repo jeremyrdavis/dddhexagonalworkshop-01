@@ -1393,109 +1393,32 @@ import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegistere
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
-import io.quarkus.logging.Log;
 
 /**
+ * "The application is blissfully ignorant of the nature of the input device. When the application has something to send out, it sends it out through a port to an adapter, which creates the appropriate signals needed by the receiving technology (human or automated). The application has a semantically sound interaction with the adapters on all sides of it, without actually knowing the nature of the things on the other side of the adapters."
+ * Alistair Cockburn, Hexagonal Architecture, 2005.
+ *
  * Outbound adapter for publishing domain events to external messaging systems.
- * 
+ *
  * This adapter implements the Hexagonal Architecture pattern by providing
  * a clean abstraction between domain event publishing needs and the specific
  * messaging technology (Kafka in this case).
- * 
+ *
  * The adapter handles:
  * - Technology-specific event publishing (Kafka via MicroProfile Reactive Messaging)
  * - Error handling and logging
  * - Message routing and serialization
  * - Maintaining loose coupling between domain and infrastructure
  */
+
 @ApplicationScoped
 public class AttendeeEventPublisher {
 
-    /**
-     * Kafka emitter for the attendees topic.
-     * Uses MicroProfile Reactive Messaging to abstract Kafka details.
-     * The channel name "attendees" is configured in application.properties.
-     */
     @Channel("attendees")
-    Emitter<AttendeeRegisteredEvent> attendeesTopic;
+    public Emitter<AttendeeRegisteredEvent> attendeesTopic;
 
-    /**
-     * Publishes an AttendeeRegisteredEvent to the external messaging system.
-     * 
-     * This method represents the boundary between domain logic and infrastructure.
-     * It takes a pure domain event and handles all the technical concerns of
-     * getting that event to external systems.
-     * 
-     * @param attendeeRegisteredEvent The domain event to publish
-     * @throws EventPublishingException if publishing fails
-     */
     public void publish(AttendeeRegisteredEvent attendeeRegisteredEvent) {
-        try {
-            Log.debugf("Publishing AttendeeRegisteredEvent for email: %s", 
-                      attendeeRegisteredEvent.email());
-            
-            // Send event to Kafka topic
-            // The framework handles serialization, partitioning, and delivery
-            attendeesTopic.send(attendeeRegisteredEvent);
-            
-            Log.infof("Successfully published AttendeeRegisteredEvent for email: %s", 
-                     attendeeRegisteredEvent.email());
-                     
-        } catch (Exception e) {
-            Log.errorf(e, "Failed to publish AttendeeRegisteredEvent for email: %s", 
-                      attendeeRegisteredEvent.email());
-                      
-            // In production, you might want to:
-            // - Store failed events for retry
-            // - Send to dead letter queue
-            // - Alert monitoring systems
-            throw new EventPublishingException(
-                "Failed to publish attendee registration event", e);
-        }
-    }
-
-    /**
-     * Health check method to verify messaging system connectivity.
-     * Useful for readiness probes and monitoring.
-     * 
-     * @return true if the messaging system is available
-     */
-    public boolean isHealthy() {
-        try {
-            // Check if the emitter is ready to send messages
-            return !attendeesTopic.isCancelled() && !attendeesTopic.hasRequests();
-        } catch (Exception e) {
-            Log.warnf(e, "Event publisher health check failed");
-            return false;
-        }
-    }
-
-    /**
-     * Graceful shutdown method to ensure all pending events are sent.
-     * Called during application shutdown.
-     */
-    @PreDestroy
-    public void shutdown() {
-        try {
-            Log.info("Shutting down AttendeeEventPublisher...");
-            
-            // Complete any pending sends
-            attendeesTopic.complete();
-            
-            Log.info("AttendeeEventPublisher shutdown complete");
-        } catch (Exception e) {
-            Log.errorf(e, "Error during AttendeeEventPublisher shutdown");
-        }
-    }
-}
-
-/**
- * Custom exception for event publishing failures.
- * Provides domain-specific error handling without exposing infrastructure details.
- */
-public class EventPublishingException extends RuntimeException {
-    public EventPublishingException(String message, Throwable cause) {
-        super(message, cause);
+        attendeesTopic.send(attendeeRegisteredEvent);
     }
 }
 ```
