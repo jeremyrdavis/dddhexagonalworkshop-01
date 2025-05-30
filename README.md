@@ -1189,12 +1189,15 @@ import java.util.Optional;
       }
 
 ```
-      Key Design Decisions
-      Aggregate-to-Entity Conversion: The fromAggregate() and toAggregate() methods handle all conversion logic, keeping domain and persistence models separate.
-      Domain Interface: Methods are named using business terminology (findByEmail, persist) rather than database terminology (selectByEmail, insert).
-      Error Handling: Repository methods throw domain exceptions, not database exceptions, maintaining the abstraction.
-      Panache Integration: We extend PanacheRepository<AttendeeEntity> to get basic CRUD operations while adding our domain-specific methods.
-      Conversion Responsibility: The repository is responsible for all conversion between domain and persistence models.
+
+### Key Design Decisions
+
+**Aggregate-to-Entity Conversion:** The fromAggregate() and toAggregate() methods handle all conversion logic, keeping domain and persistence models separate.
+
+**Domain Interface:** Methods are named using business terminology (findByEmail, persist) rather than database terminology (selectByEmail, insert).
+**Error Handling:** Repository methods throw domain exceptions, not database exceptions, maintaining the abstraction.
+**Panache Integration:** We extend PanacheRepository<AttendeeEntity> to get basic CRUD operations while adding our domain-specific methods.
+**Conversion Responsibility:** The repository is responsible for all conversion between domain and persistence models.
 
 
 
