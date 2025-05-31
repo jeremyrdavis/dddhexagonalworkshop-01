@@ -49,37 +49,8 @@ An Attendee aggregate that encapsulates the business logic for attendee registra
 
 ## Why Aggregates ~~Matter~~ Are the Heart of DDD
 - Aggregates solve the most critical problem in business software: where does the business logic live?
-  Scattered Logic Problem: Without aggregates, business rules end up scattered across:
 
-❌ Business logic scattered everywhere
-
-```java
-// In the controller
-if (email.isEmpty()) throw new ValidationException("Email required");
-
-// In the service  
-if (existingAttendees.contains(email)) throw new DuplicateException("Already registered");
-
-// In the repository
-if (attendee.getStatus() == null) attendee.setStatus("PENDING");
-
-// In random utility classes
-if (!EmailValidator.isValid(email)) throw new InvalidEmailException();
-Aggregate Solution: All business logic for a concept lives in one place:
-java// ✅ All attendee business logic centralized in the Attendee aggregate
-public class Attendee {
-public static AttendeeRegistrationResult registerAttendee(String email) {
-// All validation, business rules, and invariants enforced here
-validateEmail(email);
-checkBusinessRules(email);
-
-        Attendee attendee = new Attendee(email);
-        AttendeeRegisteredEvent event = new AttendeeRegisteredEvent(email);
-        
-        return new AttendeeRegistrationResult(attendee, event);
-    }
-}
-```
+Domain-Driven Design exists to solve a fundamental problem: where does the business logic live? In many (if not most) applications, business rules get scattered across layers, making them impossible to find, understand, or change safely. Aggregates solve this by creating a single, authoritative home for all business logic related to a specific business concept.  Every business operation flows through aggregates, every business rule is enforced by aggregates, and every significant business state change originates from aggregates.
 
 ### Core Aggregate Concepts
 
