@@ -53,20 +53,6 @@ _Aggregates solve the most critical problem in business software: where does the
 
 Domain-Driven Design exists to solve a fundamental problem: where does the business logic live? In many (if not most) applications, business rules get scattered across layers, making them impossible to find, understand, or change safely. Aggregates solve this by creating a single, authoritative home for all business logic related to a specific business concept.  Every business operation flows through aggregates, every business rule is enforced by aggregates, and every significant business state change originates from aggregates.
 
-### Core Aggregate Concepts
-
-**Consistency Boundary:** An aggregate defines what data must be consistent together. For attendees:
-- Email must be valid and unique within the conference
-- Registration status must be coherent with payment status
-- Badge information must match attendee details
-
-**Aggregate Root:** The single entry point for accessing the aggregate. Other objects can only reference the aggregate through its root (the Attendee itself), never reaching into internal objects directly.
-
-**Business Invariants:** Rules that must always be true:
-- An attendee must have a valid email
-- An attendee can only be registered once per conference
-- Registration must create both attendee record and notification event
-
 ## Implementation
 
 Aggregates are the core objects in Domain-Driven Design. An Aggregate represents the most important object or objects in our Bounded Context. We're implementing the Attendees Bounded Context, and the Attendee is the most important object in this context.
@@ -118,7 +104,22 @@ After implementing the aggregate, verify it works correctly:
 mvn test -Dtest=AttendeeTest
 ```
 
-## Aggregate Patterns in Practice
+## Deeper Dive
+
+### Core Aggregate Concepts
+
+**Consistency Boundary:** An aggregate defines what data must be consistent together. For attendees:
+- Email must be valid and unique within the conference
+- Registration status must be coherent with payment status
+- Badge information must match attendee details
+
+**Aggregate Root:** The single entry point for accessing the aggregate. Other objects can only reference the aggregate through its root (the Attendee itself), never reaching into internal objects directly.
+
+**Business Invariants:** Rules that must always be true:
+- An attendee must have a valid email
+- An attendee can only be registered once per conference
+- Registration must create both attendee record and notification event
+
 
 **Aggregate Size:** Keep aggregates small and focused. Our Attendee aggregate only handles attendee-specific concerns, not conference-wide logic.
 
