@@ -45,7 +45,7 @@ checkBusinessRules(email);
 }
 ```
 
-## Core Aggregate Concepts
+### Core Aggregate Concepts
 
 **Consistency Boundary:** An aggregate defines what data must be consistent together. For attendees:
 - Email must be valid and unique within the conference
@@ -109,10 +109,6 @@ After implementing the aggregate, verify it works correctly:
 ```bash
 mvn test -Dtest=AttendeeTest
 ```
-
-# Deeper Dive
-
-You can skip this material in your first pass and revisit it later.
 
 ## Aggregate Patterns in Practice
 
