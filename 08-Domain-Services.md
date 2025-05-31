@@ -1,15 +1,16 @@
-## Step 8: Domain Services
+# Step 8: Domain Services
 
-### Learning Objectives
+
+## Learning Objectives
 - **Understand** Domain Services as workflow orchestrators in the domain layer
 - **Implement** AttendeeService to coordinate registration business operations
 - **Apply** proper separation between domain services and application services
 - **Connect** all DDD components through clean service orchestration
 
-### What You'll Build
+## What You'll Build
 An `AttendeeService` that orchestrates the complete attendee registration workflow, coordinating between aggregates, repositories, and event publishers while maintaining clean domain boundaries.
 
-### Why Domain Services Are Essential
+## Why Domain Services Are Essential
 
 Domain Services solve the critical problem of **where to put business logic that doesn't naturally belong in any single aggregate** and **how to coordinate complex workflows**:
 
@@ -64,11 +65,11 @@ public class AttendeeEndpoint {
 }
 ```
 
-### Domain Services vs Other Service Types: Deep Dive
+## Domain Services vs Other Service Types: Deep Dive
 
 Understanding the different types of services and their responsibilities is crucial for proper DDD implementation:
 
-#### Service Type Comparison
+### Service Type Comparison
 
 | Aspect | Domain Service | Application Service | Infrastructure Service |
 |--------|----------------|-------------------|----------------------|
@@ -123,7 +124,7 @@ public class EmailService {
 }
 ```
 
-#### Domain Service vs Aggregate: Responsibility Boundaries
+### Domain Service vs Aggregate: Responsibility Boundaries
 
 | Aspect | Aggregate | Domain Service |
 |--------|-----------|----------------|
@@ -181,7 +182,7 @@ public class AttendeeService {
 }
 ```
 
-#### Transaction Management Patterns
+### Transaction Management Patterns
 
 | Pattern | Responsibility | Pros | Cons | Use Case |
 |---------|----------------|------|------|----------|
@@ -271,7 +272,7 @@ public class AttendeeService {
 }
 ```
 
-### Key Design Decisions
+## Key Design Decisions
 
 **Single Responsibility**: Each method has a clear, single purpose - registration, lookup, or cancellation.
 
