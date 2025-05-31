@@ -1,15 +1,57 @@
-## Step 7: Outbound Adapters for Events
+# Step 7: Outbound Adapters for Events
 
-### Learning Objectives
+## tl;dr
+
+Event publishers are adapters that propagate domain events to external messaging systems, enabling other bounded contexts to react to business changes without direct coupling.
+
+```java
+package dddhexagonalworkshop.conference.attendees.infrastructure;
+
+import dddhexagonalworkshop.conference.attendees.domain.events.AttendeeRegisteredEvent;
+import jakarta.enterprise.context.ApplicationScoped;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
+
+/**
+ * "The application is blissfully ignorant of the nature of the input device. When the application has something to send out, it sends it out through a port to an adapter, which creates the appropriate signals needed by the receiving technology (human or automated). The application has a semantically sound interaction with the adapters on all sides of it, without actually knowing the nature of the things on the other side of the adapters."
+ * Alistair Cockburn, Hexagonal Architecture, 2005.
+ *
+ * Outbound adapter for publishing domain events to external messaging systems.
+ *
+ * This adapter implements the Hexagonal Architecture pattern by providing
+ * a clean abstraction between domain event publishing needs and the specific
+ * messaging technology (Kafka in this case).
+ *
+ * The adapter handles:
+ * - Technology-specific event publishing (Kafka via MicroProfile Reactive Messaging)
+ * - Error handling and logging
+ * - Message routing and serialization
+ * - Maintaining loose coupling between domain and infrastructure
+ */
+
+@ApplicationScoped
+public class AttendeeEventPublisher {
+
+    @Channel("attendees")
+    public Emitter<AttendeeRegisteredEvent> attendeesTopic;
+
+    public void publish(AttendeeRegisteredEvent attendeeRegisteredEvent) {
+        attendeesTopic.send(attendeeRegisteredEvent);
+    }
+}
+```
+
+
+## Learning Objectives
 - **Understand** Outbound Adapters as the bridge between domain events and external systems
 - **Implement** AttendeeEventPublisher to send domain events to Kafka
 - **Apply** Hexagonal Architecture principles to decouple event publishing from business logic
 - **Connect** domain events to external messaging systems while maintaining clean boundaries
 
-### What You'll Build
+## What You'll Build
 An `AttendeeEventPublisher` adapter that publishes `AttendeeRegisteredEvent` domain events to Kafka, enabling other bounded contexts and systems to react to attendee registrations.
 
-### Why Outbound Adapters Are Critical
+## Why Outbound Adapters Are Critical
 
 Outbound Adapters solve the fundamental problem of **how domain logic communicates with external systems** without being polluted by technical concerns:
 
@@ -55,11 +97,11 @@ public class AttendeeService {
 }
 ```
 
-### Hexagonal Architecture: Ports and Adapters Deep Dive
+## Hexagonal Architecture: Ports and Adapters Deep Dive
 
 Understanding the relationship between Ports and Adapters is crucial for proper implementation:
 
-#### Ports vs Adapters: Core Concepts
+### Ports vs Adapters: Core Concepts
 
 | Aspect | Port | Adapter |
 |--------|------|---------|
@@ -69,7 +111,7 @@ Understanding the relationship between Ports and Adapters is crucial for proper 
 | **Dependency Direction** | Domain defines ports | Adapters depend on ports |
 | **Technology** | Technology agnostic | Technology specific |
 
-#### Inbound vs Outbound Adapters
+### Inbound vs Outbound Adapters
 
 | Aspect | Inbound Adapter | Outbound Adapter |
 |--------|-----------------|-------------------|
@@ -117,7 +159,7 @@ public class KafkaEventPublisher implements EventPublisher {
 }
 ```
 
-#### Event Publishing Patterns Comparison
+### Event Publishing Patterns Comparison
 
 | Pattern | Responsibility | Coupling | Flexibility | Complexity |
 |---------|----------------|----------|-------------|------------|
@@ -170,7 +212,7 @@ public class TransactionalEventPublisher implements EventPublisher {
 }
 ```
 
-### Implementation
+## Implementation
 
 Event publishers are adapters that propagate domain events to external messaging systems, enabling other bounded contexts to react to business changes without direct coupling.
 
