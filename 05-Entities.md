@@ -91,8 +91,6 @@ import jakarta.persistence.*;
   }
 ```
 
-
-
 ## Learning Objectives
 
 - Understand the difference between Domain Aggregates and Persistence Entities
@@ -100,14 +98,17 @@ import jakarta.persistence.*;
 - Apply the separation between domain logic and persistence concerns
 - Connect domain aggregates to database storage through persistence entities
 
-## What You'll Build
+## What We Are Building
 
 An AttendeeEntity JPA entity that represents how attendee data is stored in the database, separate from the domain logic in the Attendee aggregate.
 
-## Why Separate Persistence Entities?
+## Why Entities Matter
 
-This separation solves several critical problems in domain-driven applications:
-Domain Purity: Your domain aggregates stay focused on business logic without being polluted by persistence concerns:
+- Technology Independence: Your domain model isn't tied to any specific database or ORM framework. You could switch from JPA to MongoDB without changing your business logic.
+- Testing Simplicity: Domain logic can be tested without database setup, while persistence logic can be tested separately with database integration tests.
+- Evolution Independence: Database schema changes don't require changes to domain logic, and business rule changes don't require database migrations.
+
+Here is an example:
 
 ❌ Domain aggregate mixed with persistence concerns
 
@@ -151,74 +152,6 @@ private Long id;
     // No business logic, just persistence mapping
 }
 ```
-- Technology Independence: Your domain model isn't tied to any specific database or ORM framework. You could switch from JPA to MongoDB without changing your business logic.
-- Testing Simplicity: Domain logic can be tested without database setup, while persistence logic can be tested separately with database integration tests.
-- Evolution Independence: Database schema changes don't require changes to domain logic, and business rule changes don't require database migrations.
-
-## Entities vs Aggregates: Key Differences
-
-Understanding the distinction between Domain Aggregates and Persistence Entities is crucial for proper DDD implementation. Here's a detailed comparison:
-
-| Aspect      | Domain Aggregate             | Persistence Entity           |
-| ----------- | ---------------------------- | ---------------------------- |
-| Purpose     | Business logic & rules       | Data storage mapping         |
-| Dependencies| Pure Java, domain concepts   | JPA, database annotations    |
-| Identity    | Business identity (email)    | Technical identity (database ID) |
-| Lifecycle   | Created by business operations | Created/loaded by ORM        |
-| Mutability  | Controlled by business rules | Managed by persistence framework |
-| Testing     | Unit tests, no database      | Integration tests with database |
-
-## Deep Dive: Purpose and Responsibility
-
-Domain Aggregates are responsible for:
-
-- Enforcing business invariants and rules
-- Encapsulating domain logic and behavior
-- Maintaining consistency within their boundary
-- Creating domain events when state changes occur
-- Providing a clean API for business operations
-
-```java
-// Domain Aggregate - focused on business behavior
-public class Attendee {
-    public static AttendeeRegistrationResult registerAttendee(String email) {
-        validateBusinessRules(email);        // Business logic
-        checkConferenceCapacity();           // Business invariant
-        Attendee attendee = new Attendee(email);
-        AttendeeRegisteredEvent event = new AttendeeRegisteredEvent(email);
-        return new AttendeeRegistrationResult(attendee, event);
-    }
-}
-```
-
-Persistence Entities are responsible for:
-
-- Mapping domain data to database structures
-- Handling ORM framework requirements
-- Managing database relationships and constraints
-- Providing efficient data access patterns
-- Supporting query optimization
-
-```java
-// Persistence Entity - focused on data mapping
-@Entity @Table(name = "attendee")
-public class AttendeeEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @Column(name = "email", unique = true, nullable = false)
-    private String email;
-    
-    // No business logic - just data mapping
-}
-```
-## Why This Separation Matters
-
-**Flexibility:** Business logic can evolve independently of persistence technology. You could switch from JPA to MongoDB without changing domain code.
-**Testability:** Business logic can be tested quickly without database setup, while persistence logic gets thorough integration testing.
-**Performance:** Persistence entities can be optimized for database access patterns without compromising domain model clarity.
-**Team Organization:** Domain experts can focus on aggregates, while database specialists optimize entities.
-**Technology Evolution:** Framework updates or database changes don't ripple into business logic.
 
 ## Implementation
 
@@ -318,79 +251,78 @@ import jakarta.persistence.*;
 
 **Simple Mapping:** We start with basic column mapping. Real applications might have more complex relationships and constraints.
 
-## Database Schema
+## A Deeper Dive into Entities
 
-This entity will create a database table like:
+### Entities vs Aggregates: Key Differences
 
-```sql
-    CREATE TABLE attendee (
+Understanding the distinction between Domain Aggregates and Persistence Entities is crucial for proper DDD implementation. Here's a detailed comparison:
 
-      id BIGINT AUTO_INCREMENT PRIMARY KEY,
-          email VARCHAR(255) NOT NULL UNIQUE
-          );
+| Aspect      | Domain Aggregate               | Persistence Entity           |
+| ----------- | ------------------------------ | ---------------------------- |
+| Purpose     | Business logic & rules         | Data storage mapping         |
+| Dependencies| Pure Java, domain concepts     | JPA, database annotations    |
+| Identity    | Business identity (email)      | Technical identity (database ID) |
+| Lifecycle   | Created by business operations | Created/loaded by ORM        |
+| Mutability  | Controlled by business rules   | Managed by persistence framework |
+| Testing     | Unit tests, no database        | Integration tests with database |
+
+## Purpose and Responsibility
+
+Domain Aggregates are responsible for:
+
+- Enforcing business invariants and rules
+- Encapsulating domain logic and behavior
+- Maintaining consistency within their boundary
+- Creating domain events when state changes occur
+- Providing a clean API for business operations
+
+```java
+// Domain Aggregate - focused on business behavior
+public class Attendee {
+    public static AttendeeRegistrationResult registerAttendee(String email) {
+        validateBusinessRules(email);        // Business logic
+        checkConferenceCapacity();           // Business invariant
+        Attendee attendee = new Attendee(email);
+        AttendeeRegisteredEvent event = new AttendeeRegisteredEvent(email);
+        return new AttendeeRegistrationResult(attendee, event);
+    }
+}
 ```
-The unique constraint on email ensures data integrity at the database level, complementing the business rules in the aggregate.
+
+Persistence Entities are responsible for:
+
+- Mapping domain data to database structures
+- Handling ORM framework requirements
+- Managing database relationships and constraints
+- Providing efficient data access patterns
+- Supporting query optimization
+
+```java
+// Persistence Entity - focused on data mapping
+@Entity @Table(name = "attendee")
+public class AttendeeEntity {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(name = "email", unique = true, nullable = false)
+    private String email;
+    
+    // No business logic - just data mapping
+}
+```
+
+## Why This Separation Matters
+
+**Flexibility:** Business logic can evolve independently of persistence technology. You could switch from JPA to MongoDB without changing domain code.
+**Testability:** Business logic can be tested quickly without database setup, while persistence logic gets thorough integration testing.
+**Performance:** Persistence entities can be optimized for database access patterns without compromising domain model clarity.
+**Team Organization:** Domain experts can focus on aggregates, while database specialists optimize entities.
+**Technology Evolution:** Framework updates or database changes don't ripple into business logic.
+
 
 ## Testing Your Implementation
 
 We will test the `AttendeeEntity` in the `AttendeeRepositoryTest.java` class, which will build in the next step.
-
-## Connection to Other Components
-
-This entity will be:
-
-- Created by the AttendeeRepository when converting from domain aggregates
-- Persisted to the database using JPA/Hibernate
-- Loaded from the database when retrieving attendees
-- Converted back to domain aggregates by the repository
-
-Mapping Patterns
-
-- Simple Mapping: Our current approach with basic fields and annotations.
-  Complex Relationships: Real applications might have:
-
-```java
-@Entity
-public class AttendeeEntity {
-@OneToMany(mappedBy = "attendee", cascade = CascadeType.ALL)
-private List<RegistrationEntity> registrations;
-
-    @Embedded
-    private AddressEntity address;
-    
-    @Enumerated(EnumType.STRING)
-    private AttendeeStatus status;
-}
-```
-
-Value Objects: Embedded objects for complex data:
-
-```java
-@Embeddable
-public class AddressEntity {
-private String street;
-private String city;
-private String zipCode;
-}
-```
-
-## Real-World Considerations
-
-Performance: Use appropriate fetch strategies and indexing:
-java@Index(name = "idx_attendee_email", columnList = "email")
-@Table(name = "attendee", indexes = {@Index(name = "idx_attendee_email", columnList = "email")})
-Auditing: Track creation and modification times:
-java@CreationTimestamp
-private LocalDateTime createdAt;
-
-@UpdateTimestamp
-private LocalDateTime updatedAt;
-Versioning: Handle concurrent modifications:
-java@Version
-private Long version;
-Soft Deletes: Instead of physical deletion:
-java@Column(name = "deleted_at")
-private LocalDateTime deletedAt;
 
 ## Common Questions
 
