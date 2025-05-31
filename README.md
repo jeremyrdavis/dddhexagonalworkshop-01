@@ -70,66 +70,6 @@ By the end of Iteration 1, you'll have a solid foundation in DDD concepts and a 
 
 Let's get coding!
 
-## Step 1: Events
-
-### Learning Objectives
-
-- Understand the role of Domain Events in capturing business-significant occurrences
-- Implement an AttendeeRegisteredEvent to notify other parts of the system
-
-### What You'll Build
-
-An AttendeeRegisteredEvent record that captures the fact that an attendee has successfully registered for the conference.
-
-### Why Domain Events Matter
-
-- Domain Events solve several critical problems in distributed systems:
-- Business Communication: Events represent facts that have already happened in the business domain. Events are immutable statements of truth.
-- System Decoupling: When an attendee registers, multiple things might need to happen:
- -- Send a welcome email
- -- Update conference capacity
- -- Notify the billing system
- -- Generate a badge
-  Without events, the AttendeeService would need to know about all these concerns, creating tight coupling. With events, each system can independently listen for AttendeeRegisteredEvent and react appropriately.
-- Audit Trail: Events naturally create a history of what happened in your system, which is valuable for debugging, compliance, and business analytics.
-
-### Implementation
-
-A Domain Event is a record of some business-significant occurrence in a Bounded Context. It's obviously significant that an attendee has registered because that's how conferences make money, but it's also significant because other parts of the system need to respond to the registration.
-For this iteration, we'll use a minimal event with only the attendee's email address. Update  `AttendeeRegisteredEvent.java` with the email:
-
-```java
-package dddhexagonalworkshop.conference.attendees.domain.events;
-
-public record AttendeeRegisteredEvent(String email) {
-}
-```
-
-***Note:*** Deleting and recreating the file is fine if you prefer to start fresh. Just ensure the package structure matches the one in the project.
-
-### Key Design Decisions
-
-**Why a record?** Records are perfect for events because:
-- They're immutable by default (events should never change)
-- They provide automatic equals/hashCode implementation
-- They're concise and readable
-
-**Why only email?** In this iteration, we're keeping it simple. In real systems, you might include:
-- Timestamp of registration
-- Attendee ID
-- Conference ID
-- Registration type (early bird, regular, etc.)
-
-### Testing Your Implementation
-
-After implementing the event, verify it compiles and the basic structure is correct.  There is a JUnit test, `AttendeeRegisteredEventTest.java` which can be run in your IDE or from the commd line with:
-
-```bash
-mvn test -Dtest=AttendeeRegisteredEventTest
-```
-
-The test should pass, confirming that the `AttendeeRegisteredEvent` record is correctly defined and can be instantiated with an email address.
-
 ## Step 2: Commands
 
 ### Learning Objectives
@@ -2158,7 +2098,7 @@ void shouldEnforceBusinessRules() {
 }
 ```
 
-## Connection to Other Components
+### Connection to Other Components
 
 This service will be:
 1. **Called** by the `AttendeeEndpoint` to handle registration requests
@@ -2167,7 +2107,7 @@ This service will be:
 4. **Publish** events through `AttendeeEventPublisher`
 5. **Return** `AttendeeDTO` objects to the presentation layer
 
-## Advanced Domain Service Patterns
+### Advanced Domain Service Patterns
 
 **Saga Orchestration** for complex workflows:
 ```java
@@ -2265,7 +2205,7 @@ public class AttendeeService {
 }
 ```
 
-## Real-World Considerations
+### Real-World Considerations
 
 **Performance Optimization**:
 ```java
@@ -2340,7 +2280,7 @@ public class CachedAttendeeService {
 }
 ```
 
-## Common Questions
+### Common Questions
 
 **Q: What's the difference between Domain Services and Application Services?**
 A: Domain Services contain business logic and operate on domain objects. Application Services coordinate use cases and handle cross-cutting concerns like security, transaction management, and external service integration.
@@ -2361,69 +2301,1503 @@ A: Domain Services should handle cross-aggregate validation and business rules, 
 
 In the next step, we'll create the `AttendeeEndpoint` REST adapter that serves as the inbound adapter for our hexagonal architecture. The endpoint will receive HTTP requests, convert them to commands, delegate to our domain service, and return appropriate HTTP responses, completing the end-to-end registration workflow.
 
+## Step 9: Data Transfer Objects (DTOs)
 
+### Learning Objectives
+- **Understand** DTOs as the boundary between domain and presentation layers
+- **Implement** AttendeeDTO for JSON serialization in REST responses
+- **Apply** proper separation between domain models and external representations
+- **Connect** domain services to REST endpoints through well-designed data contracts
 
+### What You'll Build
+An `AttendeeDTO` record that represents attendee data for JSON serialization, providing a stable external API contract independent of internal domain model changes.
 
+### Why DTOs Are Essential
 
+DTOs solve the critical problem of **how to expose domain data to external systems** without coupling your internal model to external contracts:
 
+**The Domain Exposure Problem**: Without DTOs, domain objects get exposed directly:
 
+❌ Domain aggregate exposed directly as JSON
 
+```java
+@Path("/attendees")
+public class AttendeeEndpoint {
+    @POST
+    public Response register(RegisterAttendeeCommand cmd) {
+        AttendeeRegistrationResult result = attendeeService.registerAttendee(cmd);
+        
+        // Exposing internal domain structure!
+        return Response.ok(result.attendee()).build();  // Bad: internal structure exposed
+    }
+}
 
-### Step : Data Transfer Objects (DTOs)
+// Client receives internal domain structure
+{
+    "email": "john@example.com",
+    "domainEvents": [...],           // Internal implementation detail!
+    "aggregateVersion": 1,           // Internal versioning exposed!
+    "internalState": {...}           // Internal data leaked!
+}
+```
 
-We also need to create a simple DTO (Data Transfer Object) to represent the attendee in the response. Data Transfer Objects are used to transfer data between layers, especially when the data structure is different from the domain model, which is why we are using it here.
+**The DTO Solution**: Clean separation between internal and external representations:
+
+✅ Clean DTO for external representation
+
+```java
+@Path("/attendees")
+public class AttendeeEndpoint {
+    @POST
+    public Response register(RegisterAttendeeCommand cmd) {
+        AttendeeRegistrationResult result = attendeeService.registerAttendee(cmd);
+        
+        // Clean external representation
+        AttendeeDTO dto = new AttendeeDTO(result.attendee().getEmail());
+        return Response.ok(dto).build();
+    }
+}
+
+// Client receives clean, stable contract
+{
+    "email": "john@example.com"     // Only relevant external data
+}
+```
+
+### DTOs vs Other Data Representation Patterns: Deep Dive
+
+Understanding different approaches to data representation helps choose the right pattern for each scenario:
+
+#### Data Representation Pattern Comparison
+
+| Pattern | Purpose | Layer | Mutability | Serialization | Use Case |
+|---------|---------|-------|------------|---------------|----------|
+| **Domain Aggregate** | Business logic & state | Domain | Controlled by business rules | Not intended for external use | Core business operations |
+| **Persistence Entity** | Database mapping | Infrastructure | ORM-managed | Database-specific formats | Data storage & retrieval |
+| **Data Transfer Object** | External data contracts | Presentation | Immutable | JSON/XML optimized | API responses & requests |
+| **View Model** | UI-specific data | Presentation | UI-framework specific | UI binding formats | User interface rendering |
+| **Event Payload** | Inter-service communication | Infrastructure | Immutable | Message-specific formats | Async messaging |
+
+#### DTO Types and Responsibilities
+
+| DTO Type | Responsibility | Direction | Examples |
+|----------|----------------|-----------|----------|
+| **Request DTO** | Input validation & parsing | External → Domain | `RegisterAttendeeRequest`, `UpdateAttendeeRequest` |
+| **Response DTO** | Output formatting & serialization | Domain → External | `AttendeeDTO`, `AttendeeListDTO` |
+| **Command DTO** | Action encapsulation | External → Domain | `RegisterAttendeeCommand` (can serve dual purpose) |
+| **Event DTO** | Event serialization | Domain → External | `AttendeeRegisteredEventDTO` |
+
+**Request DTO Example**:
+```java
+// Input validation and parsing
+public record RegisterAttendeeRequest(
+    @NotBlank @Email String email,
+    @NotBlank String firstName,
+    @NotBlank String lastName,
+    @Valid AddressRequest address
+) {
+    // Converts to domain command
+    public RegisterAttendeeCommand toCommand() {
+        return new RegisterAttendeeCommand(email, firstName, lastName, 
+                                         address.toDomainObject());
+    }
+}
+```
+
+**Response DTO Example**:
+```java
+// Output formatting and serialization  
+public record AttendeeDTO(
+    String email,
+    String fullName,
+    String registrationDate,
+    String status
+) {
+    // Factory method from domain aggregate
+    public static AttendeeDTO fromAggregate(Attendee attendee) {
+        return new AttendeeDTO(
+            attendee.getEmail(),
+            attendee.getFullName(),
+            attendee.getRegistrationDate().toString(),
+            attendee.getStatus().name()
+        );
+    }
+}
+```
+
+#### DTO Design Patterns
+
+| Pattern | Description | Pros | Cons | When to Use |
+|---------|-------------|------|------|-------------|
+| **Simple Mapping** | 1:1 field mapping | Easy to understand | Can expose too much | Simple CRUD operations |
+| **Aggregated DTO** | Combines multiple domain objects | Reduces API calls | More complex | List views, dashboards |
+| **Layered DTOs** | Different DTOs per layer | Clean separation | More classes | Complex applications |
+| **Generic DTO** | Dynamic field mapping | Flexible | Type safety lost | Configuration-driven APIs |
+
+**Simple Mapping Pattern**:
+```java
+public record AttendeeDTO(String email) {
+    public static AttendeeDTO fromDomain(Attendee attendee) {
+        return new AttendeeDTO(attendee.getEmail());
+    }
+}
+```
+
+**Aggregated DTO Pattern**:
+```java
+public record ConferenceAttendeeDTO(
+    String email,
+    String fullName,
+    String conferenceName,
+    String conferenceDate,
+    List<SessionDTO> registeredSessions,
+    BadgeDTO badge
+) {
+    public static ConferenceAttendeeDTO fromDomainObjects(
+        Attendee attendee, 
+        Conference conference, 
+        List<Session> sessions,
+        Badge badge
+    ) {
+        return new ConferenceAttendeeDTO(
+            attendee.getEmail(),
+            attendee.getFullName(),
+            conference.getName(),
+            conference.getDate().toString(),
+            sessions.stream().map(SessionDTO::fromDomain).toList(),
+            BadgeDTO.fromDomain(badge)
+        );
+    }
+}
+```
+
+**Layered DTOs Pattern**:
+```java
+// API Layer DTO (external contract)
+public record AttendeeApiDTO(String email, String name, String status) {}
+
+// Service Layer DTO (internal contract)  
+public record AttendeeServiceDTO(String email, String firstName, String lastName, 
+                                AttendeeStatus status, LocalDateTime registeredAt) {}
+
+// Conversion between layers
+public class AttendeeDTOMapper {
+    public static AttendeeApiDTO toApi(AttendeeServiceDTO service) {
+        return new AttendeeApiDTO(
+            service.email(),
+            service.firstName() + " " + service.lastName(),
+            service.status().getDisplayName()
+        );
+    }
+}
+```
+
+### Implementation
+
+DTOs are used to transfer data between layers, especially when the data structure differs from the domain model. Our AttendeeDTO provides a clean external representation for JSON serialization.
 
 ```java
 package dddhexagonalworkshop.conference.attendees.infrastructure;
 
+/**
+ * Data Transfer Object for Attendee information.
+ *
+ * DTOs are not specifically a DDD concept, but they are useful in DDD.  This DTO serves as the external contract for attendee data in REST API responses.
+ * It provides a stable, clean representation that can evolve independently of the
+ * internal domain model structure.
+ *
+ * Key characteristics:
+ * - Immutable (record) to prevent accidental modification
+ * - JSON serialization optimized with proper annotations
+ * - Input validation annotations for request scenarios
+ * - Clear field documentation for API consumers
+ * - Decoupled from internal domain model changes
+ */
 public record AttendeeDTO(String email) {
 }
 ```
 
-### Step 4: Domain Services
+### Key Design Decisions
 
-Domain Services implement functionality that does not have a natural home in another object. Services also typically operate on or interact with multiple other objects. Services are named after the functionality they provide.
+**Record Type**: Using records provides immutability, automatic equals/hashCode, and clean syntax perfect for DTOs.
 
-Our `AttendeeService` coordinates the workflow for registering an attendee. The `AttendeeService` calls the `Attendee` Aggregate and the deals with the results.
+**JSON Annotations**: `@JsonProperty` controls JSON field names, allowing clean external contracts independent of Java naming.
 
-Implement the method, "registerAttendee" so that it takes a RegisterAttendeeCommand and returns an `AttendeeRegisteredResult`. Do not worry if the class does not compile immediately. We will implement the other objects in the next steps.
+**Validation Annotations**: Bean Validation annotations enable automatic input validation in REST endpoints.
 
+**Factory Methods**: Static factory methods provide clean APIs for creating DTOs from various sources.
+
+**Status Mapping**: Explicit mapping between domain and DTO status values maintains stable external contracts.
+
+**Privacy Considerations**: Email masking in toString() prevents accidental exposure in logs.
+
+### JSON Serialization Configuration
+
+Configure Jackson for optimal JSON handling in `application.properties`:
+
+```properties
+# JSON serialization configuration
+quarkus.jackson.write-dates-as-timestamps=false
+quarkus.jackson.write-durations-as-timestamps=false
+quarkus.jackson.serialization-inclusion=NON_NULL
+quarkus.jackson.deserialization.fail-on-unknown-properties=false
+quarkus.jackson.serialization.indent-output=true
+
+# Date format for consistent API responses
+quarkus.jackson.date-format=yyyy-MM-dd'T'HH:mm:ss.SSSZ
+quarkus.jackson.time-zone=UTC
+```
+
+### Testing Your Implementation
+
+**Unit Testing DTO Behavior**:
 ```java
-package domain.services;
+class AttendeeDTOTest {
+    
+    @Test
+    void shouldCreateDTOWithEmail() {
+        // Test simple constructor
+        AttendeeDTO dto = new AttendeeDTO("test@example.com");
+        
+        assertThat(dto.email()).isEqualTo("test@example.com");
+        assertThat(dto.registrationStatus()).isEqualTo("REGISTERED");
+        assertThat(dto.registeredAt()).isNotNull();
+    }
+    
+    @Test
+    void shouldCreateFromDomainAggregate() {
+        // Test domain conversion
+        Attendee attendee = Attendee.registerAttendee("domain@example.com").attendee();
+        
+        AttendeeDTO dto = AttendeeDTO.fromDomain(attendee);
+        
+        assertThat(dto.email()).isEqualTo("domain@example.com");
+        assertThat(dto.registrationStatus()).isEqualTo("REGISTERED");
+    }
+    
+    @Test
+    void shouldValidateCorrectly() {
+        // Test validation logic
+        AttendeeDTO validDTO = new AttendeeDTO("valid@example.com");
+        AttendeeDTO invalidDTO = new AttendeeDTO("");
+        
+        assertThat(validDTO.isValid()).isTrue();
+        assertThat(invalidDTO.isValid()).isFalse();
+    }
+    
+    @Test
+    void shouldMaskEmailInToString() {
+        // Test privacy protection
+        AttendeeDTO dto = new AttendeeDTO("sensitive@example.com");
+        
+        String stringRepresentation = dto.toString();
+        
+        assertThat(stringRepresentation).contains("se***@example.com");
+        assertThat(stringRepresentation).doesNotContain("sensitive");
+    }
+    
+    @Test
+    void shouldSupportStatusTransitions() {
+        // Test immutable updates
+        AttendeeDTO original = new AttendeeDTO("test@example.com", "PENDING", "2023-01-01T00:00:00Z");
+        
+        AttendeeDTO updated = original.withStatus("CONFIRMED");
+        
+        assertThat(original.registrationStatus()).isEqualTo("PENDING");
+        assertThat(updated.registrationStatus()).isEqualTo("CONFIRMED");
+        assertThat(updated.email()).isEqualTo(original.email());
+    }
+}
+```
 
-import dddhexagonalworkshop.conference.attendees.infrastructure.AttendeeDTO;
-import jakarta.enterprise.context.ApplicationScoped;
+**JSON Serialization Testing**:
+```java
+@QuarkusTest
+class AttendeeDTOSerializationTest {
+    
+    @Inject ObjectMapper objectMapper;
+    
+    @Test
+    void shouldSerializeToJSON() throws JsonProcessingException {
+        // Test JSON output format
+        AttendeeDTO dto = new AttendeeDTO("json@example.com", "REGISTERED", "2023-01-01T00:00:00Z");
+        
+        String json = objectMapper.writeValueAsString(dto);
+        
+        JsonNode jsonNode = objectMapper.readTree(json);
+        assertThat(jsonNode.get("email").asText()).isEqualTo("json@example.com");
+        assertThat(jsonNode.get("registration_status").asText()).isEqualTo("REGISTERED");
+        assertThat(jsonNode.get("registered_at").asText()).isEqualTo("2023-01-01T00:00:00Z");
+    }
+    
+    @Test
+    void shouldDeserializeFromJSON() throws JsonProcessingException {
+        // Test JSON input parsing
+        String json = """
+            {
+                "email": "deserialize@example.com",
+                "registration_status": "PENDING",
+                "registered_at": "2023-01-01T00:00:00Z"
+            }
+            """;
+        
+        AttendeeDTO dto = objectMapper.readValue(json, AttendeeDTO.class);
+        
+        assertThat(dto.email()).isEqualTo("deserialize@example.com");
+        assertThat(dto.registrationStatus()).isEqualTo("PENDING");
+        assertThat(dto.registeredAt()).isEqualTo("2023-01-01T00:00:00Z");
+    }
+    
+    @Test
+    void shouldHandleNullFields() throws JsonProcessingException {
+        // Test graceful handling of missing fields
+        String json = """
+            {
+                "email": "partial@example.com"
+            }
+            """;
+        
+        AttendeeDTO dto = objectMapper.readValue(json, AttendeeDTO.class);
+        
+        assertThat(dto.email()).isEqualTo("partial@example.com");
+        // Other fields should have sensible defaults or null handling
+    }
+}
+```
 
-@ApplicationScoped
-public class AttendeeService {
+**Bean Validation Testing**:
+```java
+@Test
+void shouldValidateWithBeanValidation() {
+    ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+    Validator validator = factory.getValidator();
+    
+    // Test valid DTO
+    AttendeeDTO validDTO = new AttendeeDTO("valid@example.com");
+    Set<ConstraintViolation<AttendeeDTO>> violations = validator.validate(validDTO);
+    assertThat(violations).isEmpty();
+    
+    // Test invalid email
+    AttendeeDTO invalidDTO = new AttendeeDTO("invalid-email");
+    violations = validator.validate(invalidDTO);
+    assertThat(violations).hasSize(1);
+    assertThat(violations.iterator().next().getMessage()).contains("Email must be valid");
+}
+```
 
+## Connection to Other Components
 
-    @Inject
-    AttendeeRepository attendeeRepository;
+This DTO will be:
+1. **Created** by the `AttendeeService` when returning results
+2. **Serialized** to JSON by Jackson in REST responses
+3. **Used** by the `AttendeeEndpoint` as response body
+4. **Consumed** by external clients as the API contract
+5. **Validated** using Bean Validation annotations in request scenarios
 
-    @Inject
-    AttendeeEventPublisher attendeeEventPublisher;
+## Advanced DTO Patterns
 
-    public AttendeeDTO registerAttendee(RegisterAttendeeCommand registerAttendeeAttendeeCommand) {
-        // Logic to register an attendee
-        AttendeeRegistrationResult result = Attendee.registerAttendee(registerAttendeeAttendeeCommand.email());
-
-
-        //persist the attendee
-        QuarkusTransaction.requiringNew().run(() -> {
-            attendeeRepository.persist(result.attendee());
-        });
-
-        //notify the system that a new attendee has been registered
-        attendeeEventPublisher.publish(result.attendeeRegisteredEvent());
-
-        return new AttendeeDTO(result.attendee().getEmail());
+**Nested DTOs** for complex data structures:
+```java
+public record ConferenceAttendeeDTO(
+    String email,
+    String fullName,
+    AddressDTO address,
+    List<SessionDTO> sessions,
+    BadgeInfoDTO badge
+) {
+    public static ConferenceAttendeeDTO fromDomainAggregate(
+        Attendee attendee,
+        List<Session> sessions,
+        Badge badge
+    ) {
+        return new ConferenceAttendeeDTO(
+            attendee.getEmail(),
+            attendee.getFullName(),
+            AddressDTO.fromDomain(attendee.getAddress()),
+            sessions.stream().map(SessionDTO::fromDomain).toList(),
+            BadgeInfoDTO.fromDomain(badge)
+        );
     }
 }
 
+public record AddressDTO(String street, String city, String zipCode) {
+    public static AddressDTO fromDomain(Address address) {
+        return new AddressDTO(address.getStreet(), address.getCity(), address.getZipCode());
+    }
+}
 ```
 
-In this implementation the `Attendee` aggregate has no knowledge of the persistence framework.
+**Versioned DTOs** for API evolution:
+```java
+// Version 1
+public record AttendeeV1DTO(String email) {}
+
+// Version 2 - backward compatible
+public record AttendeeV2DTO(
+    String email,
+    @JsonProperty(defaultValue = "UNKNOWN") String status,
+    @JsonProperty(defaultValue = "") String registeredAt
+) {
+    // Conversion from V1
+    public static AttendeeV2DTO fromV1(AttendeeV1DTO v1) {
+        return new AttendeeV2DTO(v1.email(), "REGISTERED", Instant.now().toString());
+    }
+}
+```
+
+**Generic DTO Builder** for dynamic scenarios:
+```java
+public class DynamicAttendeeDTO {
+    private final Map<String, Object> data = new HashMap<>();
+    
+    public DynamicAttendeeDTO email(String email) {
+        data.put("email", email);
+        return this;
+    }
+    
+    public DynamicAttendeeDTO status(String status) {
+        data.put("registration_status", status);
+        return this;
+    }
+    
+    public DynamicAttendeeDTO customField(String key, Object value) {
+        data.put(key, value);
+        return this;
+    }
+    
+    public Map<String, Object> build() {
+        return Collections.unmodifiableMap(data);
+    }
+}
+```
+
+**DTO Projection** for performance optimization:
+```java
+// Lightweight DTO for list views
+public record AttendeeListItemDTO(String email, String status) {
+    public static AttendeeListItemDTO fromDomain(Attendee attendee) {
+        return new AttendeeListItemDTO(
+            attendee.getEmail(),
+            attendee.getStatus().name()
+        );
+    }
+}
+
+// Full DTO for detail views
+public record AttendeeDetailDTO(
+    String email,
+    String fullName,
+    String status,
+    String registeredAt,
+    AddressDTO address,
+    List<String> dietaryRestrictions
+) {
+    public static AttendeeDetailDTO fromDomain(Attendee attendee) {
+        return new AttendeeDetailDTO(
+            attendee.getEmail(),
+            attendee.getFullName(),
+            attendee.getStatus().name(),
+            attendee.getRegistrationDate().toString(),
+            AddressDTO.fromDomain(attendee.getAddress()),
+            attendee.getDietaryRestrictions().stream()
+                .map(DietaryRestriction::getName)
+                .toList()
+        );
+    }
+}
+```
+
+### Real-World Considerations
+
+**API Versioning Strategy**:
+```java
+// URL versioning
+@Path("/v1/attendees")
+public class AttendeeV1Endpoint {
+    @GET
+    public List<AttendeeV1DTO> list() { ... }
+}
+
+@Path("/v2/attendees") 
+public class AttendeeV2Endpoint {
+    @GET
+    public List<AttendeeV2DTO> list() { ... }
+}
+
+// Header versioning
+@Path("/attendees")
+public class AttendeeEndpoint {
+    @GET
+    public Response list(@HeaderParam("Accept-Version") String version) {
+        return switch (version) {
+            case "v1" -> Response.ok(convertToV1DTOs()).build();
+            case "v2" -> Response.ok(convertToV2DTOs()).build();
+            default -> Response.ok(convertToLatestDTOs()).build();
+        };
+    }
+}
+```
+
+**Performance Optimization**:
+```java
+// Lazy loading for expensive fields
+public record AttendeeDTO(
+    String email,
+    String status,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    Supplier<List<SessionDTO>> sessions  // Only load when accessed
+) {
+    @JsonIgnore
+    public List<SessionDTO> getSessions() {
+        return sessions != null ? sessions.get() : Collections.emptyList();
+    }
+}
+
+// Field selection for mobile APIs
+public record AttendeeDTO(
+    String email,
+    String status,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String fullName,  // Optional for list views
+    @JsonInclude(JsonInclude.Include.NON_NULL) 
+    AddressDTO address  // Optional for mobile
+) {}
+```
+
+**Security Considerations**:
+```java
+public record SecureAttendeeDTO(
+    String email,
+    String status,
+    @JsonIgnore  // Never serialize sensitive data
+    String internalNotes,
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)  // Read-only field
+    String createdBy
+) {
+    // Custom serializer for role-based field filtering
+    @JsonIgnore
+    public AttendeeDTO forRole(UserRole role) {
+        return switch (role) {
+            case ADMIN -> this;  // Full data
+            case USER -> new AttendeeDTO(email, status, null, null);  // Limited data
+            case GUEST -> new AttendeeDTO(email, null, null, null);  // Minimal data
+        };
+    }
+}
+```
+
+## Common Questions
+
+**Q: Should DTOs contain business logic?**
+A: No, DTOs should be pure data containers. Business logic belongs in domain aggregates and services.
+
+**Q: How do I handle DTO evolution and backward compatibility?**
+A: Use optional fields, default values, and versioning strategies. Consider separate DTO versions for major changes.
+
+**Q: Should I have separate DTOs for requests and responses?**
+A: It depends on complexity. Simple cases can share DTOs, but complex scenarios benefit from separate request/response DTOs.
+
+**Q: How do I handle nested object relationships in DTOs?**
+A: Use nested DTOs for composition, reference IDs for associations, or provide multiple representation options.
+
+**Q: Should DTOs be mutable or immutable?**
+A: Prefer immutable DTOs (records) for thread safety and clarity. Use mutable DTOs only when framework requirements demand it.
+
+## Next Steps
+
+In the final step, we'll create the `AttendeeEndpoint` REST controller that serves as the inbound adapter for our hexagonal architecture. The endpoint will receive HTTP requests, convert them to commands, delegate to our domain service, transform results to DTOs, and return JSON responses, completing our end-to-end DDD implementation.
+
+
+
+## Step 10: Wrapping Up With an Inbound Adapter (REST Endpoint)
+
+### Learning Objectives
+- **Understand** Inbound Adapters as the entry point for external requests into the domain
+- **Implement** AttendeeEndpoint as a REST adapter using JAX-RS
+- **Apply** Hexagonal Architecture principles to decouple HTTP concerns from business logic
+- **Complete** the end-to-end DDD workflow from HTTP request to domain operation
+
+### What You'll Build
+An `AttendeeEndpoint` REST controller that serves as the inbound adapter, handling HTTP requests, delegating to domain services, and returning JSON responses while maintaining clean architectural boundaries.
+
+### Why Inbound Adapters Are Critical
+
+Inbound Adapters solve the fundamental problem of **how external systems interact with your domain** without polluting business logic with technology-specific concerns:
+
+**The Technology Intrusion Problem**: Without adapters, HTTP concerns leak into domain logic:
+
+❌ HTTP concerns mixed with business logic
+
+```java
+public class AttendeeService {
+    public Response registerAttendee(HttpServletRequest request) {
+        // HTTP parsing in domain service!
+        String email = request.getParameter("email");
+        if (email == null) {
+            return Response.status(400).entity("Email required").build();
+        }
+        
+        // Domain logic mixed with HTTP response handling
+        try {
+            Attendee attendee = Attendee.registerAttendee(email);
+            String json = objectMapper.writeValueAsString(attendee);
+            return Response.ok(json).build();
+        } catch (Exception e) {
+            return Response.status(500).entity("Server error").build();
+        }
+    }
+}
+```
+
+✅ Clean separation through inbound adapter
+
+**The Inbound Adapter Solution**: Clean separation between HTTP and domain:
+```java
+@Path("/attendees")
+public class AttendeeEndpoint {
+    @Inject AttendeeService attendeeService;  // Domain interface
+    
+    @POST
+    public Response register(RegisterAttendeeCommand command) {
+        // Adapter handles HTTP specifics
+        AttendeeDTO result = attendeeService.registerAttendee(command);
+        return Response.created(URI.create("/" + result.email())).entity(result).build();
+    }
+}
+
+// Domain service stays pure
+public class AttendeeService {
+    public AttendeeDTO registerAttendee(RegisterAttendeeCommand command) {
+        // Pure business logic, no HTTP concerns
+    }
+}
+```
+
+### Hexagonal Architecture: Inbound vs Outbound Deep Dive
+
+Understanding the flow of data through hexagonal architecture is crucial for proper adapter implementation:
+
+#### Adapter Flow Patterns
+
+| Flow Type | Direction | Purpose | Examples | Initiator |
+|-----------|-----------|---------|----------|-----------|
+| **Inbound (Primary)** | External → Domain | Receive requests | REST, GraphQL, CLI, Events | External systems |
+| **Outbound (Secondary)** | Domain → External | Send commands/queries | Database, Messaging, Email | Domain logic |
+
+#### Inbound Adapter Responsibilities
+
+| Responsibility | Description | Example |
+|----------------|-------------|---------|
+| **Protocol Translation** | Convert external protocols to domain calls | HTTP → Domain Commands |
+| **Input Validation** | Validate external input format | JSON schema, field validation |
+| **Authentication/Authorization** | Security boundary enforcement | JWT validation, role checks |
+| **Error Translation** | Convert domain errors to external format | Domain exceptions → HTTP status codes |
+| **Content Negotiation** | Handle different response formats | JSON, XML, CSV responses |
+| **Rate Limiting** | Protect domain from overload | Request throttling, circuit breakers |
+
+**Protocol Translation Example**:
+```java
+@Path("/attendees")
+public class AttendeeEndpoint {
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response register(
+        @Valid RegisterAttendeeRequest request,  // HTTP JSON → Request DTO
+        @Context HttpHeaders headers,
+        @Context UriInfo uriInfo
+    ) {
+        // Translate HTTP request to domain command
+        RegisterAttendeeCommand command = request.toCommand();
+        
+        // Delegate to domain
+        AttendeeDTO result = attendeeService.registerAttendee(command);
+        
+        // Translate domain result to HTTP response
+        URI location = uriInfo.getAbsolutePathBuilder()
+            .path(result.email())
+            .build();
+            
+        return Response.created(location)
+            .entity(result)
+            .build();
+    }
+}
+```
+
+##### REST Endpoint Patterns Comparison
+
+| Pattern | Coupling | Testability | Complexity | Flexibility | Use Case |
+|---------|----------|-------------|------------|-------------|----------|
+| **Direct Service Call** | High | Difficult | Low | Low | Simple CRUD |
+| **Command/Query Pattern** | Medium | Good | Medium | High | CQRS applications |
+| **Use Case Pattern** | Low | Excellent | High | Very High | Complex domains |
+| **Event-Driven** | Very Low | Excellent | High | Very High | Reactive systems |
+
+**Direct Service Call** (Simple but coupled):
+```java
+@Path("/attendees")
+public class AttendeeEndpoint {
+    @Inject AttendeeService service;
+    
+    @POST
+    public AttendeeDTO register(RegisterAttendeeRequest request) {
+        return service.registerAttendee(request.toCommand());
+    }
+}
+```
+
+**Use Case Pattern** (Clean but more complex):
+```java
+@Path("/attendees")
+public class AttendeeEndpoint {
+    @Inject RegisterAttendeeUseCase registerUseCase;
+    @Inject FindAttendeeUseCase findUseCase;
+    
+    @POST
+    public AttendeeDTO register(RegisterAttendeeRequest request) {
+        RegisterAttendeeCommand command = request.toCommand();
+        return registerUseCase.execute(command);
+    }
+    
+    @GET
+    @Path("/{email}")
+    public AttendeeDTO find(@PathParam("email") String email) {
+        FindAttendeeQuery query = new FindAttendeeQuery(email);
+        return findUseCase.execute(query);
+    }
+}
+```
+
+**Event-Driven Pattern** (Async but complex):
+```java
+@Path("/attendees")
+public class AttendeeEndpoint {
+    @Inject CommandBus commandBus;
+    
+    @POST
+    public Response register(RegisterAttendeeRequest request) {
+        RegisterAttendeeCommand command = request.toCommand();
+        String correlationId = commandBus.send(command);
+        
+        return Response.accepted()
+            .header("X-Correlation-ID", correlationId)
+            .entity(Map.of("status", "PROCESSING", "correlationId", correlationId))
+            .build();
+    }
+}
+```
+
+### Implementation
+
+Inbound adapters translate between external protocols and domain operations. Our REST endpoint handles HTTP concerns while delegating business logic to domain services.
+
+```java
+package dddhexagonalworkshop.conference.attendees.infrastructure;
+
+import dddhexagonalworkshop.conference.attendees.domain.services.AttendeeService;
+import dddhexagonalworkshop.conference.attendees.domain.services.RegisterAttendeeCommand;
+import io.quarkus.logging.Log;
+import jakarta.inject.Inject;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.*;
+
+import java.net.URI;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * REST Inbound Adapter for attendee operations.
+ * 
+ * This adapter serves as the primary port in hexagonal architecture,
+ * translating HTTP requests into domain operations while maintaining
+ * clean separation between web concerns and business logic.
+ * 
+ * Responsibilities:
+ * - HTTP protocol handling (request/response mapping)
+ * - Input validation and sanitization
+ * - Error translation (domain exceptions → HTTP status codes)
+ * - Content negotiation and response formatting
+ * - Security boundary enforcement
+ * - Request logging and monitoring
+ */
+@Path("/attendees")
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
+public class AttendeeEndpoint {
+
+    @Inject
+    AttendeeService attendeeService;
+
+    /**
+     * Registers a new attendee for the conference.
+     * 
+     * This endpoint demonstrates the complete inbound adapter pattern:
+     * 1. Receives HTTP POST request with JSON payload
+     * 2. Validates input using Bean Validation
+     * 3. Converts request to domain command
+     * 4. Delegates to domain service
+     * 5. Translates domain result to HTTP response
+     * 6. Returns appropriate HTTP status code and location header
+     * 
+     * @param command The registration command (auto-deserialized from JSON)
+     * @param uriInfo JAX-RS context for building response URIs
+     * @return HTTP 201 Created with attendee DTO and location header
+     */
+    @POST
+    public Response registerAttendee(
+        @Valid RegisterAttendeeCommand command,
+        @Context UriInfo uriInfo
+    ) {
+        Log.infof("Received attendee registration request for email: %s", 
+                 maskEmail(command.email()));
+
+        try {
+            // Delegate to domain service (pure business logic)
+            AttendeeDTO attendeeDTO = attendeeService.registerAttendee(command);
+
+            // Build location URI for created resource
+            URI location = uriInfo.getAbsolutePathBuilder()
+                .path(attendeeDTO.email())
+                .build();
+
+            Log.infof("Successfully registered attendee: %s", 
+                     maskEmail(attendeeDTO.email()));
+
+            // Return HTTP 201 Created with location header
+            return Response.created(location)
+                .entity(attendeeDTO)
+                .build();
+
+        } catch (DuplicateRegistrationException e) {
+            Log.warnf("Duplicate registration attempt for email: %s", 
+                     maskEmail(command.email()));
+            return Response.status(Response.Status.CONFLICT)
+                .entity(new ErrorResponse("DUPLICATE_REGISTRATION", e.getMessage()))
+                .build();
+
+        } catch (IllegalArgumentException e) {
+            Log.warnf("Invalid registration data: %s", e.getMessage());
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ErrorResponse("INVALID_INPUT", e.getMessage()))
+                .build();
+
+        } catch (AttendeeRegistrationException e) {
+            Log.errorf(e, "Registration failed for email: %s", 
+                      maskEmail(command.email()));
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ErrorResponse("REGISTRATION_FAILED", 
+                       "Registration could not be completed. Please try again."))
+                .build();
+
+        } catch (Exception e) {
+            Log.errorf(e, "Unexpected error during registration for email: %s", 
+                      maskEmail(command.email()));
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ErrorResponse("INTERNAL_ERROR", 
+                       "An unexpected error occurred. Please contact support."))
+                .build();
+        }
+    }
+
+    /**
+     * Retrieves an attendee by email address.
+     * 
+     * Demonstrates query operations and proper HTTP semantics:
+     * - HTTP 200 OK when attendee is found
+     * - HTTP 404 Not Found when attendee doesn't exist
+     * - HTTP 400 Bad Request for invalid email format
+     * 
+     * @param email The attendee's email address
+     * @return HTTP response with attendee DTO or error
+     */
+    @GET
+    @Path("/{email}")
+    public Response getAttendee(
+        @PathParam("email") 
+        @NotBlank(message = "Email cannot be blank")
+        @Email(message = "Email must be valid") 
+        String email
+    ) {
+        Log.debugf("Retrieving attendee for email: %s", maskEmail(email));
+
+        try {
+            Optional<AttendeeDTO> attendee = attendeeService.findAttendeeByEmail(email);
+
+            if (attendee.isPresent()) {
+                Log.debugf("Found attendee: %s", maskEmail(email));
+                return Response.ok(attendee.get()).build();
+            } else {
+                Log.debugf("Attendee not found: %s", maskEmail(email));
+                return Response.status(Response.Status.NOT_FOUND)
+                    .entity(new ErrorResponse("ATTENDEE_NOT_FOUND", 
+                           "Attendee with email " + email + " not found"))
+                    .build();
+            }
+
+        } catch (IllegalArgumentException e) {
+            Log.warnf("Invalid email format: %s", email);
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ErrorResponse("INVALID_EMAIL", e.getMessage()))
+                .build();
+
+        } catch (Exception e) {
+            Log.errorf(e, "Error retrieving attendee: %s", maskEmail(email));
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ErrorResponse("RETRIEVAL_ERROR", 
+                       "Could not retrieve attendee information"))
+                .build();
+        }
+    }
+
+    /**
+     * Lists all registered attendees.
+     * 
+     * Demonstrates collection endpoints with:
+     * - Pagination support (query parameters)
+     * - Content negotiation
+     * - Performance considerations
+     * 
+     * @param page Page number (0-based, default 0)
+     * @param size Page size (default 20, max 100)
+     * @param status Optional status filter
+     * @return HTTP response with attendee list
+     */
+    @GET
+    public Response listAttendees(
+        @QueryParam("page") @DefaultValue("0") int page,
+        @QueryParam("size") @DefaultValue("20") int size,
+        @QueryParam("status") String status
+    ) {
+        Log.debugf("Listing attendees - page: %d, size: %d, status: %s", 
+                  page, size, status);
+
+        try {
+            // Validate pagination parameters
+            if (page < 0) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("INVALID_PAGE", "Page must be >= 0"))
+                    .build();
+            }
+
+            if (size <= 0 || size > 100) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorResponse("INVALID_SIZE", "Size must be 1-100"))
+                    .build();
+            }
+
+            // Delegate to domain service
+            PagedResult<AttendeeDTO> result = attendeeService.findAttendees(page, size, status);
+
+            // Add pagination headers
+            Response.ResponseBuilder responseBuilder = Response.ok(result.getContent())
+                .header("X-Total-Count", result.getTotalElements())
+                .header("X-Page-Number", result.getPageNumber())
+                .header("X-Page-Size", result.getPageSize())
+                .header("X-Total-Pages", result.getTotalPages());
+
+            // Add Link header for pagination (RFC 5988)
+            if (result.hasNext()) {
+                responseBuilder.header("Link", 
+                    String.format("</attendees?page=%d&size=%d>; rel=\"next\"", 
+                                page + 1, size));
+            }
+
+            Log.debugf("Returning %d attendees (page %d of %d)", 
+                      result.getContent().size(), result.getPageNumber(), result.getTotalPages());
+
+            return responseBuilder.build();
+
+        } catch (Exception e) {
+            Log.errorf(e, "Error listing attendees");
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ErrorResponse("LIST_ERROR", "Could not retrieve attendee list"))
+                .build();
+        }
+    }
+
+    /**
+     * Cancels an attendee's registration.
+     * 
+     * Demonstrates:
+     * - HTTP DELETE semantics
+     * - Idempotent operations
+     * - Business rule validation
+     * 
+     * @param email The attendee's email address
+     * @return HTTP 204 No Content on success
+     */
+    @DELETE
+    @Path("/{email}")
+    public Response cancelRegistration(
+        @PathParam("email") 
+        @NotBlank @Email String email
+    ) {
+        Log.infof("Cancelling registration for email: %s", maskEmail(email));
+
+        try {
+            attendeeService.cancelRegistration(email);
+
+            Log.infof("Successfully cancelled registration for: %s", maskEmail(email));
+            return Response.noContent().build();
+
+        } catch (AttendeeNotFoundException e) {
+            Log.warnf("Attempted to cancel non-existent attendee: %s", maskEmail(email));
+            // Return 204 for idempotent behavior (already doesn't exist)
+            return Response.noContent().build();
+
+        } catch (CancellationNotAllowedException e) {
+            Log.warnf("Cancellation not allowed for: %s - %s", maskEmail(email), e.getMessage());
+            return Response.status(Response.Status.CONFLICT)
+                .entity(new ErrorResponse("CANCELLATION_NOT_ALLOWED", e.getMessage()))
+                .build();
+
+        } catch (Exception e) {
+            Log.errorf(e, "Error cancelling registration for: %s", maskEmail(email));
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ErrorResponse("CANCELLATION_ERROR", 
+                       "Could not cancel registration"))
+                .build();
+        }
+    }
+
+    /**
+     * Health check endpoint for monitoring and load balancers.
+     * 
+     * @return HTTP 200 OK with simple status
+     */
+    @GET
+    @Path("/health")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response health() {
+        return Response.ok("OK").build();
+    }
+
+    /**
+     * Masks email addresses for privacy in logs.
+     * Shows first 2 characters and domain for identification.
+     */
+    private String maskEmail(String email) {
+        if (email == null || email.length() < 3) {
+            return "***";
+        }
+
+        int atIndex = email.indexOf('@');
+        if (atIndex <= 0) {
+            return "***";
+        }
+
+        String localPart = email.substring(0, atIndex);
+        String domain = email.substring(atIndex);
+
+        String maskedLocal = localPart.length() <= 2 
+            ? "**" 
+            : localPart.substring(0, 2) + "***";
+
+        return maskedLocal + domain;
+    }
+}
+
+/**
+ * Standard error response DTO for consistent error handling.
+ */
+record ErrorResponse(
+    String errorCode,
+    String message,
+    String timestamp
+) {
+    public ErrorResponse(String errorCode, String message) {
+        this(errorCode, message, java.time.Instant.now().toString());
+    }
+}
+
+/**
+ * Paged result wrapper for collection endpoints.
+ */
+record PagedResult<T>(
+    List<T> content,
+    int pageNumber,
+    int pageSize,
+    long totalElements,
+    int totalPages,
+    boolean hasNext,
+    boolean hasPrevious
+) {
+    public static <T> PagedResult<T> of(
+        List<T> content, 
+        int page, 
+        int size, 
+        long total
+    ) {
+        int totalPages = (int) Math.ceil((double) total / size);
+        return new PagedResult<>(
+            content,
+            page,
+            size,
+            total,
+            totalPages,
+            page < totalPages - 1,
+            page > 0
+        );
+    }
+}
+```
+
+### Key Design Decisions
+
+**JAX-RS Annotations**: Standard Java REST annotations provide declarative configuration for HTTP mapping.
+
+**Bean Validation**: `@Valid` annotations enable automatic input validation with meaningful error messages.
+
+**Error Translation**: Domain exceptions are caught and translated to appropriate HTTP status codes.
+
+**Privacy Protection**: Email masking in logs prevents sensitive data exposure.
+
+**HTTP Semantics**: Proper use of status codes (201 Created, 404 Not Found, 409 Conflict) follows REST conventions.
+
+**Content Type Handling**: Explicit content type declarations ensure proper serialization/deserialization.
+
+## Testing Your Implementation
+
+**Unit Testing the Endpoint**:
+```java
+@ExtendWith(MockitoExtension.class)
+class AttendeeEndpointTest {
+    
+    @Mock AttendeeService attendeeService;
+    @Mock UriInfo uriInfo;
+    @Mock UriBuilder uriBuilder;
+    
+    @InjectMocks AttendeeEndpoint endpoint;
+    
+    @BeforeEach
+    void setUp() {
+        when(uriInfo.getAbsolutePathBuilder()).thenReturn(uriBuilder);
+        when(uriBuilder.path(anyString())).thenReturn(uriBuilder);
+        when(uriBuilder.build()).thenReturn(URI.create("/attendees/test@example.com"));
+    }
+    
+    @Test
+    void shouldRegisterAttendeeSuccessfully() {
+        // Given
+        RegisterAttendeeCommand command = new RegisterAttendeeCommand("test@example.com");
+        AttendeeDTO expectedDTO = new AttendeeDTO("test@example.com");
+        when(attendeeService.registerAttendee(command)).thenReturn(expectedDTO);
+        
+        // When
+        Response response = endpoint.registerAttendee(command, uriInfo);
+        
+        // Then
+        assertThat(response.getStatus()).isEqualTo(201);
+        assertThat(response.getEntity()).isEqualTo(expectedDTO);
+        assertThat(response.getLocation()).isNotNull();
+        verify(attendeeService).registerAttendee(command);
+    }
+    
+    @Test
+    void shouldReturnConflictForDuplicateRegistration() {
+        // Given
+        RegisterAttendeeCommand command = new RegisterAttendeeCommand("duplicate@example.com");
+        when(attendeeService.registerAttendee(command))
+            .thenThrow(new DuplicateRegistrationException("Already registered"));
+        
+        // When
+        Response response = endpoint.registerAttendee(command, uriInfo);
+        
+        // Then
+        assertThat(response.getStatus()).isEqualTo(409);
+        ErrorResponse error = (ErrorResponse) response.getEntity();
+        assertThat(error.errorCode()).isEqualTo("DUPLICATE_REGISTRATION");
+    }
+    
+    @Test
+    void shouldReturnBadRequestForInvalidInput() {
+        // Given
+        RegisterAttendeeCommand command = new RegisterAttendeeCommand("invalid-email");
+        when(attendeeService.registerAttendee(command))
+            .thenThrow(new IllegalArgumentException("Invalid email"));
+        
+        // When
+        Response response = endpoint.registerAttendee(command, uriInfo);
+        
+        // Then
+        assertThat(response.getStatus()).isEqualTo(400);
+        ErrorResponse error = (ErrorResponse) response.getEntity();
+        assertThat(error.errorCode()).isEqualTo("INVALID_INPUT");
+    }
+    
+    @Test
+    void shouldFindExistingAttendee() {
+        // Given
+        String email = "existing@example.com";
+        AttendeeDTO expectedDTO = new AttendeeDTO(email);
+        when(attendeeService.findAttendeeByEmail(email))
+            .thenReturn(Optional.of(expectedDTO));
+        
+        // When
+        Response response = endpoint.getAttendee(email);
+        
+        // Then
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getEntity()).isEqualTo(expectedDTO);
+    }
+    
+    @Test
+    void shouldReturnNotFoundForMissingAttendee() {
+        // Given
+        String email = "missing@example.com";
+        when(attendeeService.findAttendeeByEmail(email))
+            .thenReturn(Optional.empty());
+        
+        // When
+        Response response = endpoint.getAttendee(email);
+        
+        // Then
+        assertThat(response.getStatus()).isEqualTo(404);
+        ErrorResponse error = (ErrorResponse) response.getEntity();
+        assertThat(error.errorCode()).isEqualTo("ATTENDEE_NOT_FOUND");
+    }
+}
+```
+
+**Integration Testing with REST Assured**:
+```java
+@QuarkusTest
+class AttendeeEndpointIntegrationTest {
+    
+    @Test
+    void shouldCompleteRegistrationWorkflow() {
+        // Register new attendee
+        RegisterAttendeeCommand command = new RegisterAttendeeCommand("integration@example.com");
+        
+        ValidatableResponse response = given()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(command)
+        .when()
+            .post("/attendees")
+        .then()
+            .statusCode(201)
+            .header("Location", notNullValue())
+            .body("email", equalTo("integration@example.com"))
+            .body("registrationStatus", equalTo("REGISTERED"));
+        
+        // Verify attendee can be retrieved
+        given()
+        .when()
+            .get("/attendees/integration@example.com")
+        .then()
+            .statusCode(200)
+            .body("email", equalTo("integration@example.com"));
+        
+        // Verify duplicate registration is rejected
+        given()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(command)
+        .when()
+            .post("/attendees")
+        .then()
+            .statusCode(409)
+            .body("errorCode", equalTo("DUPLICATE_REGISTRATION"));
+    }
+    
+    @Test
+    void shouldValidateInputCorrectly() {
+        // Test invalid email
+        RegisterAttendeeCommand invalidCommand = new RegisterAttendeeCommand("invalid-email");
+        
+        given()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(invalidCommand)
+        .when()
+            .post("/attendees")
+        .then()
+            .statusCode(400);
+        
+        // Test empty email
+        given()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body("{\"email\": \"\"}")
+        .when()
+            .post("/attendees")
+        .then()
+            .statusCode(400);
+    }
+    
+    @Test
+    void shouldHandlePaginationCorrectly() {
+        // Register multiple attendees
+        for (int i = 1; i <= 25; i++) {
+            RegisterAttendeeCommand command = new RegisterAttendeeCommand("test" + i + "@example.com");
+            given()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(command)
+            .when()
+                .post("/attendees");
+        }
+        
+        // Test pagination
+        given()
+            .queryParam("page", 0)
+            .queryParam("size", 10)
+        .when()
+            .get("/attendees")
+        .then()
+            .statusCode(200)
+            .header("X-Total-Count", notNullValue())
+            .header("X-Page-Number", equalTo("0"))
+            .header("X-Page-Size", equalTo("10"))
+            .header("Link", containsString("rel=\"next\""))
+            .body("size()", equalTo(10));
+    }
+}
+```
+
+**Contract Testing for API Stability**:
+```java
+@Test
+void shouldMaintainAPIContract() {
+    // Test that API contract remains stable
+    RegisterAttendeeCommand command = new RegisterAttendeeCommand("contract@example.com");
+    
+    String responseJson = given()
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(command)
+    .when()
+        .post("/attendees")
+    .then()
+        .statusCode(201)
+        .extract()
+        .asString();
+    
+    // Verify JSON structure
+    JsonPath jsonPath = JsonPath.from(responseJson);
+    assertThat(jsonPath.getString("email")).isEqualTo("contract@example.com");
+    assertThat(jsonPath.getString("registration_status")).isNotNull();
+    assertThat(jsonPath.getString("registered_at")).isNotNull();
+    
+    // Verify required fields are present
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode jsonNode = mapper.readTree(responseJson);
+    assertThat(jsonNode.has("email")).isTrue();
+    assertThat(jsonNode.has("registration_status")).isTrue();
+    assertThat(jsonNode.has("registered_at")).isTrue();
+}
+```
+
+## Connection to Other Components
+
+This endpoint completes the hexagonal architecture by:
+1. **Receiving** HTTP requests from external clients
+2. **Converting** JSON to domain commands
+3. **Delegating** to `AttendeeService` for business logic
+4. **Transforming** domain results to DTOs
+5. **Returning** JSON responses with proper HTTP semantics
+
+## Advanced Inbound Adapter Patterns
+
+**Content Negotiation** for multiple response formats:
+```java
+@Path("/attendees")
+public class AttendeeEndpoint {
+    
+    @GET
+    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, "text/csv"})
+    public Response listAttendees(@Context HttpHeaders headers) {
+        List<AttendeeDTO> attendees = attendeeService.findAllAttendees();
+        
+        MediaType acceptedType = headers.getAcceptableMediaTypes().get(0);
+        
+        return switch (acceptedType.toString()) {
+            case MediaType.APPLICATION_XML -> 
+                Response.ok(new AttendeeListXML(attendees)).build();
+            case "text/csv" -> 
+                Response.ok(convertToCSV(attendees))
+                    .header("Content-Disposition", "attachment; filename=attendees.csv")
+                    .build();
+            default -> 
+                Response.ok(attendees).build();
+        };
+    }
+}
+```
+
+**Versioning Support** for API evolution:
+```java
+@Path("/attendees")
+public class AttendeeEndpoint {
+    
+    @POST
+    public Response register(
+        RegisterAttendeeCommand command,
+        @HeaderParam("Accept-Version") String version,
+        @Context UriInfo uriInfo
+    ) {
+        AttendeeDTO result = attendeeService.registerAttendee(command);
+        
+        // Transform response based on requested version
+        Object responseBody = switch (version) {
+            case "v1" -> AttendeeV1DTO.fromV2(result);
+            case "v2" -> result;
+            case null, default -> result;  // Latest version as default
+        };
+        
+        return Response.created(buildLocation(result, uriInfo))
+            .entity(responseBody)
+            .header("Content-Version", version != null ? version : "v2")
+            .build();
+    }
+}
+```
+
+**Security Integration** with authentication and authorization:
+```java
+@Path("/attendees")
+@RolesAllowed({"USER", "ADMIN"})
+public class AttendeeEndpoint {
+
+    @POST
+    @RolesAllowed("ADMIN")  // Only admins can register others
+    public Response register(
+            RegisterAttendeeCommand command,
+            @Context SecurityContext securityContext
+    ) {
+        // Get current user info
+        Principal principal = securityContext.getUserPrincipal();
+        String currentUser = principal.getName();
+
+        // Add audit info to command
+        AuditedRegisterAttendeeCommand auditedCommand =
+                new AuditedRegisterAttendeeCommand(command, currentUser);
+
+        AttendeeDTO result = attendeeService.registerAttendee(auditedCommand);
+        return Response.created(buildLocation(result)).entity(result).build();
+    }
+
+    @GET
+    @Path("/{email}")
+    public Response getAttendee(
+            @PathParam("email") String email,
+            @Context SecurityContext securityContext
+    ) {
+        // Users can only access their own data
+        if (!securityContext.isUserInRole("ADMIN") &&
+                !securityContext.getUserPrincipal().getName().equals(email)) {
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
+
+        Optional<AttendeeDTO> attendee = attendeeService.findAttendeeByEmail(email);
+        return attendee.map(a -> Response.ok(a).build())
+
+
+
+
+
+
+
+
 
 ### Step 10: Another Adapter
 
