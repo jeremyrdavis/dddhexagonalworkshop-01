@@ -101,6 +101,20 @@ public record RegisterAttendeeCommand(String email) {
     }
 }
 ```
+### Key Design Decisions
+
+**Why a record?** Records are perfect for commands because:
+- They're immutable by default (commands shouldn't change after creation)
+- They provide automatic equals/hashCode (useful for deduplication)
+- They're concise and focus on data rather than behavior
+- The compact constructor enables validation at creation time
+
+**Why only email?** We're starting simple to focus on the DDD concepts. In real systems, registration might include:
+- First and last name
+- Phone number
+- Company information
+- Dietary restrictions
+- T-shirt size
 
 ## Deeper Dive
 
@@ -120,20 +134,6 @@ Think of it like ordering food:
 
 - **Event**: "Customer ordered a burger at 2:15 PM" (this definitely happened)
 
-### Key Design Decisions
-
-**Why a record?** Records are perfect for commands because:
-- They're immutable by default (commands shouldn't change after creation)
-- They provide automatic equals/hashCode (useful for deduplication)
-- They're concise and focus on data rather than behavior
-- The compact constructor enables validation at creation time
-
-**Why only email?** We're starting simple to focus on the DDD concepts. In real systems, registration might include:
-- First and last name
-- Phone number
-- Company information
-- Dietary restrictions
-- T-shirt size
 
 **Package placement?** Commands live with the service that processes them, not in a separate "commands" package. This keeps related concepts together.
 
