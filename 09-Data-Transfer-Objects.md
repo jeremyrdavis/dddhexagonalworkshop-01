@@ -1,15 +1,42 @@
-## Step 9: Data Transfer Objects (DTOs)
+# Step 9: Data Transfer Objects (DTOs)
 
-### Learning Objectives
+***Note:*** This step is not specific to Domain Driven Design.  This is simply a useful coding practice.
+
+## tl;dr
+
+DTOs are used to transfer data between layers, especially when the data structure differs from the domain model. Our AttendeeDTO provides a clean external representation for JSON serialization.
+
+```java
+package dddhexagonalworkshop.conference.attendees.infrastructure;
+
+/**
+ * Data Transfer Object for Attendee information.
+ *
+ * DTOs are not specifically a DDD concept, but they are useful in DDD.  This DTO serves as the external contract for attendee data in REST API responses.
+ * It provides a stable, clean representation that can evolve independently of the
+ * internal domain model structure.
+ *
+ * Key characteristics:
+ * - Immutable (record) to prevent accidental modification
+ * - JSON serialization optimized with proper annotations
+ * - Input validation annotations for request scenarios
+ * - Clear field documentation for API consumers
+ * - Decoupled from internal domain model changes
+ */
+public record AttendeeDTO(String email) {
+}
+```
+
+## Learning Objectives
 - **Understand** DTOs as the boundary between domain and presentation layers
 - **Implement** AttendeeDTO for JSON serialization in REST responses
 - **Apply** proper separation between domain models and external representations
 - **Connect** domain services to REST endpoints through well-designed data contracts
 
-### What You'll Build
+## What You'll Build
 An `AttendeeDTO` record that represents attendee data for JSON serialization, providing a stable external API contract independent of internal domain model changes.
 
-### Why DTOs Are Essential
+## Why DTOs Are Essential
 
 DTOs solve the critical problem of **how to expose domain data to external systems** without coupling your internal model to external contracts:
 
@@ -61,11 +88,11 @@ public class AttendeeEndpoint {
 }
 ```
 
-### DTOs vs Other Data Representation Patterns: Deep Dive
+## DTOs vs Other Data Representation Patterns: Deep Dive
 
 Understanding different approaches to data representation helps choose the right pattern for each scenario:
 
-#### Data Representation Pattern Comparison
+### Data Representation Pattern Comparison
 
 | Pattern | Purpose | Layer | Mutability | Serialization | Use Case |
 |---------|---------|-------|------------|---------------|----------|
@@ -75,7 +102,7 @@ Understanding different approaches to data representation helps choose the right
 | **View Model** | UI-specific data | Presentation | UI-framework specific | UI binding formats | User interface rendering |
 | **Event Payload** | Inter-service communication | Infrastructure | Immutable | Message-specific formats | Async messaging |
 
-#### DTO Types and Responsibilities
+### DTO Types and Responsibilities
 
 | DTO Type | Responsibility | Direction | Examples |
 |----------|----------------|-----------|----------|
@@ -122,7 +149,7 @@ public record AttendeeDTO(
 }
 ```
 
-#### DTO Design Patterns
+### DTO Design Patterns
 
 | Pattern | Description | Pros | Cons | When to Use |
 |---------|-------------|------|------|-------------|
@@ -189,7 +216,7 @@ public class AttendeeDTOMapper {
 }
 ```
 
-### Implementation
+## Implementation
 
 DTOs are used to transfer data between layers, especially when the data structure differs from the domain model. Our AttendeeDTO provides a clean external representation for JSON serialization.
 
