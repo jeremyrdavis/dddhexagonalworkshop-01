@@ -25,14 +25,16 @@ An AttendeeRegisteredEvent record that captures the fact that an attendee has su
 Domain Events are statements of fact that the business cares about.
 
 Building around events solves several critical problems in distributed systems:
-- Business Communication: Events represent facts that have already happened in the business domain. Events are immutable statements of truth.
-- System Decoupling: When an attendee registers, multiple things might need to happen:
-- - Send a welcome email
-- - Update conference capacity
-- - Notify the billing system
-- - Generate a badge
 
-By publishing an event like `AttendeeRegisteredEvent`, you allow different parts of the system to react independently without tight coupling. Each component can listen for this event and perform its own actions.
+**Business Communication:** Events represent facts that have already happened in the business domain. Events are immutable statements of truth.
+
+**System Decoupling:** When an attendee registers, multiple things might need to happen:
+- Send a welcome email
+- Update conference capacity
+- Notify the billing system
+- Generate a badge
+
+By publishing an event like `AttendeeRegisteredEvent`, we enable different parts of the system to react independently without tight coupling. Each component can listen for this event and perform its own actions.
 
 Having an audit trail is another advantage: Events naturally create a history of what happened in your system, which is valuable for debugging, compliance, and business analytics.
 
@@ -47,8 +49,6 @@ package dddhexagonalworkshop.conference.attendees.domain.events;
 public record AttendeeRegisteredEvent(String email) {
 }
 ```
-
-***Note:*** Deleting and recreating the file is fine if you prefer to start fresh. Just ensure the package structure matches the one in the project.
 
 ## Key Design Decisions
 
