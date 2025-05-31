@@ -1,7 +1,8 @@
-# Step 8: Domain Services
+# Step 8: Application Services
 
 ## tl;dr
 
+There are three types of Services in DDD: Application Services, Domain Services, and Infrastructure Services.
 Domain Services implement functionality that doesn't have a natural home in any single Aggregate. They coordinate workflows across multiple domain objects and handle cross-Aggregate business rules.
 
 ```java
@@ -54,10 +55,10 @@ public class AttendeeService {
 - **Apply** proper separation between domain services and application services
 - **Connect** all DDD components through clean service orchestration
 
-## What You'll Build
+## What We're Building
 An `AttendeeService` that orchestrates the complete attendee registration workflow, coordinating between aggregates, repositories, and event publishers while maintaining clean domain boundaries.
 
-## Why Domain Services Are Essential
+## Why Domain Services Matter
 
 Domain Services solve the critical problem of **where to put business logic that doesn't naturally belong in any single aggregate** and **how to coordinate complex workflows**:
 
@@ -111,21 +112,82 @@ public class AttendeeEndpoint {
     }
 }
 ```
+### Implementation
 
-## Domain Services vs Other Service Types: Deep Dive
+Domain Services implement functionality that doesn't have a natural home in any single aggregate. They coordinate workflows across multiple domain objects and handle cross-aggregate business rules.
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain.services;
+
+import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
+import dddhexagonalworkshop.conference.attendees.infrastructure.AttendeeDTO;
+import dddhexagonalworkshop.conference.attendees.infrastructure.AttendeeEventPublisher;
+import dddhexagonalworkshop.conference.attendees.persistence.AttendeeRepository;
+import io.quarkus.narayana.jta.QuarkusTransaction;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
+/**
+ * "The application and domain layers call on the SERVICES provided by the infrastructure layer. When the scope of a SERVICE has been well chosen and its interface well designed, the caller can remain loosely coupled and uncomplicated by the elaborate behavior the SERVICE interface encapsulates."
+ * Eric Evans, Domain-Driven Design: Tackling Complexity in the Heart of Software, 2003.
+ */
+
+@ApplicationScoped
+public class AttendeeService {
+
+
+    @Inject
+    AttendeeRepository attendeeRepository;
+
+    @Inject
+    AttendeeEventPublisher attendeeEventPublisher;
+
+    public AttendeeDTO registerAttendee(RegisterAttendeeCommand registerAttendeeAttendeeCommand) {
+        // Logic to register an attendee
+        AttendeeRegistrationResult result = Attendee.registerAttendee(registerAttendeeAttendeeCommand.email());
+
+
+        //persist the attendee
+        QuarkusTransaction.requiringNew().run(() -> {
+            attendeeRepository.persist(result.attendee());
+        });
+
+        //notify the system that a new attendee has been registered
+        attendeeEventPublisher.publish(result.attendeeRegisteredEvent());
+
+        return new AttendeeDTO(result.attendee().getEmail());
+    }
+}
+```
+
+## Key Design Decisions
+
+**Single Responsibility**: Each method has a clear, single purpose - registration, lookup, or cancellation.
+
+**Transaction Boundaries**: `@Transactional` ensures data consistency across repository operations and event publishing.
+
+**Error Handling**: Domain-specific exceptions provide meaningful error messages and maintain abstraction boundaries.
+
+**Logging Strategy**: Structured logging for operational visibility and debugging.
+
+**Separation of Concerns**: Private methods separate validation, persistence, and event publishing concerns.
+
+## Deeper Dive
+
+### Domain Services vs Other Service Types
 
 Understanding the different types of services and their responsibilities is crucial for proper DDD implementation:
 
 ### Service Type Comparison
 
-| Aspect | Domain Service | Application Service | Infrastructure Service |
-|--------|----------------|-------------------|----------------------|
-| **Layer** | Domain | Application | Infrastructure |
-| **Purpose** | Business workflow orchestration | Use case coordination | Technical operations |
-| **Dependencies** | Domain objects only | Domain + Infrastructure | External systems |
-| **Business Logic** | Contains business rules | Minimal business logic | No business logic |
-| **Transaction Scope** | Often transactional | Manages transactions | Participates in transactions |
-| **Testing** | Domain-focused unit tests | Integration tests | Technical integration tests |
+| Aspect                | Domain Service                  | Application Service     | Infrastructure Service |
+|-----------------------|---------------------------------|-------------------------|----------------------|
+| **Layer**             | Domain                          | Application             | Infrastructure |
+| **Purpose**           | Business workflow orchestration | Use case coordination   | Technical operations |
+| **Dependencies**      | Domain objects only             | Domain + Infrastructure | External systems |
+| **Business Logic**    | Contains business rules         | Minimal business logic  | No business logic |
+| **Transaction Scope** | Often transactional             | Manages transactions    | Participates in transactions |
+| **Testing**           | Domain-focused unit tests       | Integration tests       | Technical integration tests |
 
 **Domain Service Examples**:
 
@@ -270,66 +332,6 @@ public class AttendeeService {
     }
 }
 ```
-
-### Implementation
-
-Domain Services implement functionality that doesn't have a natural home in any single aggregate. They coordinate workflows across multiple domain objects and handle cross-aggregate business rules.
-
-```java
-package dddhexagonalworkshop.conference.attendees.domain.services;
-
-import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
-import dddhexagonalworkshop.conference.attendees.infrastructure.AttendeeDTO;
-import dddhexagonalworkshop.conference.attendees.infrastructure.AttendeeEventPublisher;
-import dddhexagonalworkshop.conference.attendees.persistence.AttendeeRepository;
-import io.quarkus.narayana.jta.QuarkusTransaction;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
-/**
- * "The application and domain layers call on the SERVICES provided by the infrastructure layer. When the scope of a SERVICE has been well chosen and its interface well designed, the caller can remain loosely coupled and uncomplicated by the elaborate behavior the SERVICE interface encapsulates."
- * Eric Evans, Domain-Driven Design: Tackling Complexity in the Heart of Software, 2003.
- */
-
-@ApplicationScoped
-public class AttendeeService {
-
-
-    @Inject
-    AttendeeRepository attendeeRepository;
-
-    @Inject
-    AttendeeEventPublisher attendeeEventPublisher;
-
-    public AttendeeDTO registerAttendee(RegisterAttendeeCommand registerAttendeeAttendeeCommand) {
-        // Logic to register an attendee
-        AttendeeRegistrationResult result = Attendee.registerAttendee(registerAttendeeAttendeeCommand.email());
-
-
-        //persist the attendee
-        QuarkusTransaction.requiringNew().run(() -> {
-            attendeeRepository.persist(result.attendee());
-        });
-
-        //notify the system that a new attendee has been registered
-        attendeeEventPublisher.publish(result.attendeeRegisteredEvent());
-
-        return new AttendeeDTO(result.attendee().getEmail());
-    }
-}
-```
-
-## Key Design Decisions
-
-**Single Responsibility**: Each method has a clear, single purpose - registration, lookup, or cancellation.
-
-**Transaction Boundaries**: `@Transactional` ensures data consistency across repository operations and event publishing.
-
-**Error Handling**: Domain-specific exceptions provide meaningful error messages and maintain abstraction boundaries.
-
-**Logging Strategy**: Structured logging for operational visibility and debugging.
-
-**Separation of Concerns**: Private methods separate validation, persistence, and event publishing concerns.
 
 ## Testing Your Implementation
 
