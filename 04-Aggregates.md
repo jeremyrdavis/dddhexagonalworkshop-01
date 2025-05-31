@@ -47,7 +47,7 @@ public class Attendee {
 
 An Attendee aggregate that encapsulates the business logic for attendee registration and maintains consistency within the attendee bounded context.
 
-## Why Aggregates Matter Are the Heart of DDD
+## Why Aggregates ~~Matter~~ Are the Heart of DDD
 - Aggregates solve the most critical problem in business software: where does the business logic live?
   Scattered Logic Problem: Without aggregates, business rules end up scattered across:
 
