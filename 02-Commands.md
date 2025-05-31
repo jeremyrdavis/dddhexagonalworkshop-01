@@ -1,16 +1,47 @@
-## Step 2: Commands
+# Step 2: Commands
 
-### Learning Objectives
+## TL;DR
+
+Add a String email parameter to RegisterAttendeeCommand:
+
+```java
+package dddhexagonalworkshop.conference.attendees.domain.services;
+
+/**
+ * Command representing a request to register an attendee for the conference.
+ * Commands encapsulate the intent to perform a business operation and can
+ * be validated, queued, or rejected before processing.
+ */
+public record RegisterAttendeeCommand(String email) {
+    
+    /**
+     * Compact constructor for validation.
+     * This runs automatically when the record is created.
+     */
+    public RegisterAttendeeCommand {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email cannot be null or blank");
+        }
+        
+        // Basic email format validation
+        if (!email.contains("@")) {
+            throw new IllegalArgumentException("Email must contain @ symbol");
+        }
+    }
+}
+```
+
+## Learning Objectives
 - Understand how Commands encapsulate business intentions and requests for action
 - Distinguish between Commands (can fail) and Events (facts that occurred)
 - Implement a RegisterAttendeeCommand to capture attendee registration requests
 - Apply the Command pattern to create a clear contract for business operations
 
-### You'll Build
+## You'll Build
 
 A `RegisterAttendeeCommand` record that encapsulates all the data needed to request attendee registration for the conference.
 
-### Why Commands Matter
+## Why Commands Matter
 
 Commands solve several important problems in business applications:
 - Clear Business Intent: Commands explicitly represent what a user or system wants to accomplish. `RegisterAttendeeCommand` clearly states "I want to register this person for the conference" rather than having loose parameters floating around.
@@ -37,15 +68,15 @@ _Note_: Validation in a command should be lightweight and focused on ensuring th
 - Immutability: Commands are immutable objects that can't be accidentally modified as they pass through your system. This prevents bugs and makes the code easier to reason about.
 - Failure Handling: Unlike events (which represent facts), commands can be rejected. Your business logic can validate a command and decide whether to process it or reject it with a clear error message.
 
-### Commands vs Events: A Critical Distinction
+## Commands vs Events: A Critical Distinction
 
-| Aspect | Commands | Events |
-|--------|----------|--------|
-| **Nature** | Intention/Request | Fact/What happened |
-| **Can fail?** | Yes | No (already happened) |
-| **Mutability** | Immutable | Immutable |
-| **Tense** | Imperative ("Register") | Past tense ("Registered") |
-| **Example** | RegisterAttendeeCommand | AttendeeRegisteredEvent |
+| Aspect         | Commands                | Events                    |
+|----------------|----------------------------------------|------------|
+| **Nature**     | Intention/Request       | Fact/What happened        |
+| **Can fail?**  | Yes                     | No (already happened)     |
+| **Mutability** | Immutable               | Immutable                 |
+| **Tense**      | Imperative ("Register") | Past tense ("Registered") |
+| **Example**    | RegisterAttendeeCommand | AttendeeRegisteredEvent |
 
 Think of it like ordering food:
 - **Command**: "I want to order a burger" (restaurant might be out of burgers)
