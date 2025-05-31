@@ -7,5 +7,5 @@ package dddhexagonalworkshop.conference.attendees.domain.services;
  * Command to register an attendee.
  * This command is used to initiate the registration process for an attendee.
  */
-public record RegisterAttendeeCommand() {
+public record RegisterAttendeeCommand(String email) {
 }

@@ -11,15 +11,19 @@ An AttendeeRegisteredEvent record that captures the fact that an attendee has su
 
 ### Why Domain Events Matter
 
-- Domain Events solve several critical problems in distributed systems:
+Domain Events are statements of fact that the business cares about.
+
+Building around events solves several critical problems in distributed systems:
 - Business Communication: Events represent facts that have already happened in the business domain. Events are immutable statements of truth.
 - System Decoupling: When an attendee registers, multiple things might need to happen:
-  -- Send a welcome email
-  -- Update conference capacity
-  -- Notify the billing system
-  -- Generate a badge
-  Without events, the AttendeeService would need to know about all these concerns, creating tight coupling. With events, each system can independently listen for AttendeeRegisteredEvent and react appropriately.
-- Audit Trail: Events naturally create a history of what happened in your system, which is valuable for debugging, compliance, and business analytics.
+- - Send a welcome email
+- - Update conference capacity
+- - Notify the billing system
+- - Generate a badge
+
+By publishing an event like `AttendeeRegisteredEvent`, you allow different parts of the system to react independently without tight coupling. Each component can listen for this event and perform its own actions.
+
+Having an audit trail is another advantage: Events naturally create a history of what happened in your system, which is valuable for debugging, compliance, and business analytics.
 
 ### Implementation
 
@@ -50,7 +54,7 @@ public record AttendeeRegisteredEvent(String email) {
 
 ### Testing Your Implementation
 
-After implementing the event, verify it compiles and the basic structure is correct.  There is a JUnit test, `AttendeeRegisteredEventTest.java` which can be run in your IDE or from the commd line with:
+There is a JUnit test, `AttendeeRegisteredEventTest.java` which can be run in your IDE or from the command line. The test checks that the `AttendeeRegisteredEvent` can be instantiated with an email address and that it behaves correctly as a record.  The test is commented out so that the class will compile.  To run it simply uncomment it and run:
 
 ```bash
 mvn test -Dtest=AttendeeRegisteredEventTest
