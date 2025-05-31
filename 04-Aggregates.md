@@ -43,7 +43,7 @@ public class Attendee {
 - Apply the concept of aggregate roots and consistency boundaries
 - Connect Commands, business logic, and Result objects through aggregate methods
 
-## What You'll Build
+## What We Are Building
 
 An Attendee aggregate that encapsulates the business logic for attendee registration and maintains consistency within the attendee bounded context.
 
