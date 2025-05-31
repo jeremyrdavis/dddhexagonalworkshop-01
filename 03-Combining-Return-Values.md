@@ -28,7 +28,7 @@ public record AttendeeRegistrationResult(Attendee attendee, AttendeeRegisteredEv
 
 An AttendeeRegistrationResult Record that packages together both the created Attendee aggregate and the AttendeeRegisteredEvent that needs to be published.
 
-## Why?
+## Why Combining Return Values Matters?
  
 - Multiple Return Values: Operations often need to return more than one thing. When an attendee registers, we need to create both the Attendee, `Attendee`, (the domain state that represents the attendee), and an event, `AttendeeRegisteredEvent`, (to publish to other systems)
 
