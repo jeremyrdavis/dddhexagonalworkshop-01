@@ -13,11 +13,10 @@ public record AttendeeRegisteredEvent(String email) {
 
 ## Learning Objectives
 
-- Understand the role of Events in capturing business-significant occurrences
-- Understand the differences between Application, Domain, and Infrastru
-- Implement an AttendeeRegisteredEvent to notify other parts of the system
+- Understand the role of Events in capturing business-significant occurrences.
+- Implement an AttendeeRegisteredEvent to notify other parts of the system.
 
-## What You'll Build
+## What We Are Building
 
 An AttendeeRegisteredEvent record that captures the fact that an attendee has successfully registered for the conference.
 
