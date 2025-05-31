@@ -7,7 +7,7 @@
 1. [Events](01-Events.md)
 2. [Commands](02-Commands.md)
 3. [Combining Return Values](03-Combining-Return-Values.md)
-4. [Aggregates](04-Attendee-Aggregate.md)
+4. [Aggregates](04-Aggregate.md)
 4. [Domain Service](06-Domain-Service.md)
 5. [Command Pattern](07-Command-Pattern.md)
 6. [Repository](08-Repository.md)
