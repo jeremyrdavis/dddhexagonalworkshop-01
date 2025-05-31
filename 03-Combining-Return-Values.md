@@ -24,7 +24,7 @@ public record AttendeeRegistrationResult(Attendee attendee, AttendeeRegisteredEv
 - Understand how cleanly package multiple outputs from domain operations
 - Implement AttendeeRegistrationResult to encapsulate both domain state and events
 
-## What You'll Build
+## What We Are Building
 
 An AttendeeRegistrationResult Record that packages together both the created Attendee aggregate and the AttendeeRegisteredEvent that needs to be published.
 
