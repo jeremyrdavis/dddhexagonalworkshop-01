@@ -31,13 +31,14 @@ public record RegisterAttendeeCommand(String email) {
 }
 ```
 
+_Note_: We are only adding a single parameter, "email," because this first iteration is a quick overview.
+
 ## Learning Objectives
 - Understand how Commands encapsulate business intentions and requests for action
 - Distinguish between Commands (can fail) and Events (facts that occurred)
 - Implement a RegisterAttendeeCommand to capture attendee registration requests
-- Apply the Command pattern to create a clear contract for business operations
 
-## You'll Build
+## What We Are Building
 
 A `RegisterAttendeeCommand` record that encapsulates all the data needed to request attendee registration for the conference.
 
@@ -67,20 +68,6 @@ _Note_: Validation in a command should be lightweight and focused on ensuring th
 
 - Immutability: Commands are immutable objects that can't be accidentally modified as they pass through your system. This prevents bugs and makes the code easier to reason about.
 - Failure Handling: Unlike events (which represent facts), commands can be rejected. Your business logic can validate a command and decide whether to process it or reject it with a clear error message.
-
-## Commands vs Events: A Critical Distinction
-
-| Aspect         | Commands                | Events                    |
-|----------------|----------------------------------------|------------|
-| **Nature**     | Intention/Request       | Fact/What happened        |
-| **Can fail?**  | Yes                     | No (already happened)     |
-| **Mutability** | Immutable               | Immutable                 |
-| **Tense**      | Imperative ("Register") | Past tense ("Registered") |
-| **Example**    | RegisterAttendeeCommand | AttendeeRegisteredEvent |
-
-Think of it like ordering food:
-- **Command**: "I want to order a burger" (restaurant might be out of burgers)
-- **Event**: "Customer ordered a burger at 2:15 PM" (this definitely happened)
 
 ### Implementation
 
@@ -114,6 +101,24 @@ public record RegisterAttendeeCommand(String email) {
     }
 }
 ```
+
+## Deeper Dive
+
+### Commands vs Events: A Critical Distinction
+
+| Aspect         | Commands                | Events                    |
+|----------------|----------------------------------------|------------|
+| **Nature**     | Intention/Request       | Fact/What happened        |
+| **Can fail?**  | Yes                     | No (already happened)     |
+| **Mutability** | Immutable               | Immutable                 |
+| **Tense**      | Imperative ("Register") | Past tense ("Registered") |
+| **Example**    | RegisterAttendeeCommand | AttendeeRegisteredEvent |
+
+Think of it like ordering food:
+
+- **Command**: "I want to order a burger" (restaurant might be out of burgers)
+
+- **Event**: "Customer ordered a burger at 2:15 PM" (this definitely happened)
 
 ### Key Design Decisions
 
