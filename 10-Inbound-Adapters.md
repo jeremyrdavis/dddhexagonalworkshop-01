@@ -1,15 +1,59 @@
-## Step 10: Wrapping Up With an Inbound Adapter (REST Endpoint)
+# Step 10: Wrapping Up With an Inbound Adapter (REST Endpoint)
 
-### Learning Objectives
+## tl;dr
+
+Inbound adapters translate between external protocols and domain operations. Our REST endpoint handles HTTP concerns while delegating business logic to domain services:
+
+```java
+package dddhexagonalworkshop.conference.attendees.infrastructure;
+
+import dddhexagonalworkshop.conference.attendees.domain.services.AttendeeService;
+import dddhexagonalworkshop.conference.attendees.domain.services.RegisterAttendeeCommand;
+import io.quarkus.logging.Log;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+
+import java.net.URI;
+
+
+/**
+ * "The application is blissfully ignorant of the nature of the input device. When the application has something to send out, it sends it out through a port to an adapter, which creates the appropriate signals needed by the receiving technology (human or automated). The application has a semantically sound interaction with the adapters on all sides of it, without actually knowing the nature of the things on the other side of the adapters."
+ * Alistair Cockburn, Hexagonal Architecture, 2005.
+ *
+ */
+@Path("/attendees")
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
+public class AttendeeEndpoint {
+
+    @Inject
+    AttendeeService attendeeService;
+
+    @POST
+    public Response registerAttendee(RegisterAttendeeCommand registerAttendeeCommand) {
+        Log.debugf("Creating attendee %s", registerAttendeeCommand);
+
+        AttendeeDTO attendeeDTO = attendeeService.registerAttendee(registerAttendeeCommand);
+
+        Log.debugf("Created attendee %s", attendeeDTO);
+
+        return Response.created(URI.create("/" + attendeeDTO.email())).entity(attendeeDTO).build();
+    }
+
+}```
+
+## Learning Objectives
 - **Understand** Inbound Adapters as the entry point for external requests into the domain
 - **Implement** AttendeeEndpoint as a REST adapter using JAX-RS
 - **Apply** Hexagonal Architecture principles to decouple HTTP concerns from business logic
 - **Complete** the end-to-end DDD workflow from HTTP request to domain operation
 
-### What You'll Build
+## What You'll Build
 An `AttendeeEndpoint` REST controller that serves as the inbound adapter, handling HTTP requests, delegating to domain services, and returning JSON responses while maintaining clean architectural boundaries.
 
-### Why Inbound Adapters Are Critical
+## Why Inbound Adapters Are Critical
 
 Inbound Adapters solve the fundamental problem of **how external systems interact with your domain** without polluting business logic with technology-specific concerns:
 
@@ -62,18 +106,18 @@ public class AttendeeService {
 }
 ```
 
-### Hexagonal Architecture: Inbound vs Outbound Deep Dive
+## Hexagonal Architecture: Inbound vs Outbound Deep Dive
 
 Understanding the flow of data through hexagonal architecture is crucial for proper adapter implementation:
 
-#### Adapter Flow Patterns
+### Adapter Flow Patterns
 
 | Flow Type | Direction | Purpose | Examples | Initiator |
 |-----------|-----------|---------|----------|-----------|
 | **Inbound (Primary)** | External → Domain | Receive requests | REST, GraphQL, CLI, Events | External systems |
 | **Outbound (Secondary)** | Domain → External | Send commands/queries | Database, Messaging, Email | Domain logic |
 
-#### Inbound Adapter Responsibilities
+### Inbound Adapter Responsibilities
 
 | Responsibility | Description | Example |
 |----------------|-------------|---------|
@@ -114,7 +158,7 @@ public class AttendeeEndpoint {
 }
 ```
 
-##### REST Endpoint Patterns Comparison
+#### REST Endpoint Patterns Comparison
 
 | Pattern | Coupling | Testability | Complexity | Flexibility | Use Case |
 |---------|----------|-------------|------------|-------------|----------|
@@ -177,7 +221,7 @@ public class AttendeeEndpoint {
 }
 ```
 
-### Implementation
+## Implementation
 
 Inbound adapters translate between external protocols and domain operations. Our REST endpoint handles HTTP concerns while delegating business logic to domain services.
 
