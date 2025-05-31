@@ -3,5 +3,6 @@
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
-  "remote.autoForwardPorts": true
+  "remote.autoForwardPorts": true,
+  "forwardPorts": [8080]
 }
