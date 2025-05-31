@@ -48,7 +48,8 @@ public class Attendee {
 An Attendee aggregate that encapsulates the business logic for attendee registration and maintains consistency within the attendee bounded context.
 
 ## Why Aggregates ~~Matter~~ Are the Heart of DDD
-- Aggregates solve the most critical problem in business software: where does the business logic live?
+
+_Aggregates solve the most critical problem in business software: where does the business logic live?_
 
 Domain-Driven Design exists to solve a fundamental problem: where does the business logic live? In many (if not most) applications, business rules get scattered across layers, making them impossible to find, understand, or change safely. Aggregates solve this by creating a single, authoritative home for all business logic related to a specific business concept.  Every business operation flows through aggregates, every business rule is enforced by aggregates, and every significant business state change originates from aggregates.
 
