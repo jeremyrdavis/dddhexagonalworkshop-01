@@ -42,7 +42,8 @@ public class AttendeeEndpoint {
         return Response.created(URI.create("/" + attendeeDTO.email())).entity(attendeeDTO).build();
     }
 
-}```
+}
+```
 
 ## Learning Objectives
 - **Understand** Inbound Adapters as the entry point for external requests into the domain
