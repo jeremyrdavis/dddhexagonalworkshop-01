@@ -1,17 +1,17 @@
-## Step 4: Aggregates
+# Step 4: Aggregates
 
-### Learning Objectives
+## Learning Objectives
 
 - Understand Aggregates as the core building blocks of Domain-Driven Design
 - Implement the Attendee aggregate with business logic and invariant enforcement
 - Apply the concept of aggregate roots and consistency boundaries
 - Connect Commands, business logic, and Result objects through aggregate methods
 
-### What You'll Build
+## What You'll Build
 
 An Attendee aggregate that encapsulates the business logic for attendee registration and maintains consistency within the attendee bounded context.
 
-### Why Aggregates Are the Heart of DDD
+## Why Aggregates Are the Heart of DDD
 - Aggregates solve the most critical problem in business software: where does the business logic live?
   Scattered Logic Problem: Without aggregates, business rules end up scattered across:
 
@@ -45,7 +45,7 @@ checkBusinessRules(email);
 }
 ```
 
-### Core Aggregate Concepts
+## Core Aggregate Concepts
 
 **Consistency Boundary:** An aggregate defines what data must be consistent together. For attendees:
 - Email must be valid and unique within the conference
@@ -59,7 +59,7 @@ checkBusinessRules(email);
 - An attendee can only be registered once per conference
 - Registration must create both attendee record and notification event
 
-### Implementation
+## Implementation
 
 Aggregates are the core objects in Domain-Driven Design. An Aggregate represents the most important object or objects in our Bounded Context. We're implementing the Attendees Bounded Context, and the Attendee is the most important object in this context.
 An Aggregate both represents the real-world object (a conference attendee in this case) and encapsulates all of the invariants, or business logic, associated with the object.
@@ -78,7 +78,7 @@ public class Attendee {
 
     String email;
 
-    protected Attendee(String email) {
+    private Attendee(String email) {
     }
 
     public static AttendeeRegistrationResult registerAttendee(String email) {
@@ -95,10 +95,12 @@ public class Attendee {
 }
 ```
 
-###  Key Design Decisions
+##  Key Design Decisions
 
 **Static Factory Method:** registerAttendee() is static because it represents creating a new attendee, not operating on an existing one. This is a common pattern for aggregate creation.
+
 **Private Constructor:** The constructor is private to force all creation through the factory method, ensuring business rules are always applied.
+
 **Business Logic Location:** All validation and business rules are in the aggregate, not scattered across services or controllers.
 
 ### Testing Your Implementation
@@ -108,7 +110,11 @@ After implementing the aggregate, verify it works correctly:
 mvn test -Dtest=AttendeeTest
 ```
 
-### Aggregate Patterns in Practice
+# Deeper Dive
+
+You can skip this material in your first pass and revisit it later.
+
+## Aggregate Patterns in Practice
 
 **Aggregate Size:** Keep aggregates small and focused. Our Attendee aggregate only handles attendee-specific concerns, not conference-wide logic.
 
