@@ -8,11 +8,12 @@
 2. [Commands](02-Commands.md)
 3. [Combining Return Values](03-Combining-Return-Values.md)
 4. [Aggregates](04-Aggregates.md)
-4. [Domain Service](06-Domain-Service.md)
-5. [Command Pattern](07-Command-Pattern.md)
+5. [Entities](05-Entities.md)
 6. [Repository](08-Repository.md)
-7. [Data Transfer Objects](09-DTOs.md)
-8. [Inbound Adapter](10-Inbound-Adapter.md)
+7. [Outbound Adapters](07-Outbound-Adapters.md)
+8. [Domain Services](08-Domain-Services.md)
+7. [Data Transfer Objects](09-Data-Transfer-Objects.md)
+8. [Inbound Adapters](10-Inbound-Adapters.md)
 
 ### Overview
 
