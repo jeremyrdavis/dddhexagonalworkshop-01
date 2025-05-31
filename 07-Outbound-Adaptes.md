@@ -2,7 +2,7 @@
 
 ## tl;dr
 
-Event publishers are adapters that propagate domain events to external messaging systems, enabling other bounded contexts to react to business changes without direct coupling.
+Update `AttendeeEventPublisher` to send messages to Kafka.  We are going to use the Microprofile `Channel` and `Emitter` classes to avoid any about Kafka specific details.
 
 ```java
 package dddhexagonalworkshop.conference.attendees.infrastructure;
