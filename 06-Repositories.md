@@ -1,17 +1,69 @@
-## Step 6: Repositories
+# Step 6: Repositories
 
-#### Learning Objectives
+## tl;dr
+
+Repositories represent all objects of a certain type as a conceptual set (usually emulated). They act like collections, except with more elaborate querying capability. Objects of the appropriate type are added and removed, and the machinery behind the repository inserts them or deletes them from the database.
+
+```java
+package dddhexagonalworkshop.conference.attendees.persistence;
+
+import dddhexagonalworkshop.conference.attendees.domain.aggregates.Attendee;
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import jakarta.enterprise.context.ApplicationScoped;
+
+import java.util.Optional;
+
+/**
+* Repository for managing Attendee aggregate persistence.
+*
+* This class bridges between the domain model (Attendee) and the persistence
+* model (AttendeeEntity), handling all conversion and database operations.
+* The repository implements the domain's persistence interface while using
+* Quarkus Panache for the actual database operations.
+  */
+  @ApplicationScoped
+  public class AttendeeRepository implements PanacheRepository<AttendeeEntity> {
+
+  /**
+    * Persists an Attendee aggregate to the database.
+    * Converts the domain aggregate to a persistence entity and saves it.
+    *
+    * @param aggregate The Attendee domain aggregate to persist
+      */
+      public void persist(Attendee aggregate) {
+      // Convert domain aggregate to persistence entity
+      AttendeeEntity attendeeEntity = fromAggregate(aggregate);
+    
+          // Use inherited Panache method to persist
+          persist(attendeeEntity);
+      }
+
+  /**
+    * Converts a domain Attendee aggregate to an AttendeeEntity for persistence.
+    * This is where domain concepts are mapped to database structures.
+    *
+    * @param attendee The domain aggregate
+    * @return The persistence entity
+      */
+      private AttendeeEntity fromAggregate(Attendee attendee) {
+          return new AttendeeEntity(attendee.getEmail());
+      }
+}
+
+```
+
+### Learning Objectives
 
 - Understand the Repository pattern as the bridge between domain and persistence
 - Implement AttendeeRepository that converts between aggregates and entities
 - Apply domain-driven persistence patterns while maintaining clean architecture
 - Connect domain aggregates to database storage through proper abstraction layers
 
-### What You'll Build
+## What You'll Build
 
 An AttendeeRepository that handles all persistence operations for attendees, converting between domain Attendee aggregates and persistence AttendeeEntity objects while maintaining clean separation of concerns.
 
-### Why Repositories Are Essential in DDD
+## Why Repositories Are Essential in DDD
 
 Repositories solve the fundamental problem of how domain objects interact with persistence without being contaminated by database concerns:
 The Persistence Pollution Problem: Without repositories, domain logic gets mixed with database code:
@@ -57,7 +109,7 @@ public class AttendeeService {
 }
 ```
 
-### Repository Pattern: Core Concepts
+## Repository Pattern: Core Concepts
 
 **Collection Abstraction:** Repositories make persistence feel like working with an in-memory collection of domain objects. You add, remove, and find aggregates without thinking about SQL or database details.
 
@@ -79,7 +131,7 @@ public class AttendeeService {
 | Query Language | Domain concepts | SQL/Database terms |
 | Scope | Per aggregate root | Per table/entity |
 
-#### Repository Example (Domain-focused):
+### Repository Example (Domain-focused):
 
 ```java
 public interface AttendeeRepository {
@@ -90,7 +142,7 @@ public interface AttendeeRepository {
 }
 ```
 
-#### DAO Example (Database-focused):
+### DAO Example (Database-focused):
 
 ```java
 public interface AttendeeDAO {
@@ -102,7 +154,7 @@ public interface AttendeeDAO {
 }
 ```
 
-#### Repository vs Service Layer
+### Repository vs Service Layer
 
 | Aspect | Repository | Service |
 |--------|------------|---------|
@@ -113,7 +165,7 @@ public interface AttendeeDAO {
 | Domain Events | Not responsible for events | Publishes domain events |
 
 
-### What Belongs in Repository:
+## What Belongs in Repository:
 
 ✅ Persistence operations for Attendee aggregate
 
@@ -126,7 +178,7 @@ public class AttendeeRepository {
 }
 ```
 
-#### What Belongs in Service:
+### What Belongs in Service:
 
 ✅ Business workflow orchestration
 
@@ -142,7 +194,7 @@ public class AttendeeService {
     }
 }
 ```
-#### Repository vs Active Record
+### Repository vs Active Record
 
 | Aspect | Repository Pattern | Active Record Pattern |
 | ------ | ----------------- | -------------------- |
@@ -180,7 +232,7 @@ public class Attendee extends ActiveRecord {
 }
 ```
 
-### Implementation
+## Implementation
 
 Repositories represent all objects of a certain type as a conceptual set (usually emulated). They act like collections, except with more elaborate querying capability. Objects of the appropriate type are added and removed, and the machinery behind the repository inserts them or deletes them from the database.
 
